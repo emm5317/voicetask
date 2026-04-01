@@ -7,6 +7,8 @@ import (
 	"html/template"
 	"strings"
 	"time"
+
+	"github.com/emm5317/voicetask/db"
 )
 
 //go:embed templates/*
@@ -41,7 +43,7 @@ type DeadlineInfo struct {
 type TaskGroup struct {
 	Tag       string
 	Meta      ProjectMeta
-	Tasks     []Task
+	Tasks     []db.Task
 	OpenCount int
 	DoneCount int
 	Total     int
@@ -82,7 +84,7 @@ func NewRenderer() *Renderer {
 }
 
 // RenderDashboard renders the full dashboard page.
-func (r *Renderer) RenderDashboard(tasks []Task, tags []string) (string, error) {
+func (r *Renderer) RenderDashboard(tasks []db.Task, tags []string) (string, error) {
 	data := buildDashboardData(tasks, tags)
 	var buf bytes.Buffer
 	if err := r.templates.ExecuteTemplate(&buf, "layout.html", data); err != nil {
@@ -92,7 +94,7 @@ func (r *Renderer) RenderDashboard(tasks []Task, tags []string) (string, error) 
 }
 
 // RenderTaskList renders only the task list partial (for HTMX swaps).
-func (r *Renderer) RenderTaskList(tasks []Task, tags []string) (string, error) {
+func (r *Renderer) RenderTaskList(tasks []db.Task, tags []string) (string, error) {
 	data := buildDashboardData(tasks, tags)
 	var buf bytes.Buffer
 	if err := r.templates.ExecuteTemplate(&buf, "tasklist.html", data); err != nil {
@@ -110,8 +112,8 @@ func (r *Renderer) RenderLogin(errMsg string) (string, error) {
 	return buf.String(), nil
 }
 
-func buildDashboardData(tasks []Task, tags []string) DashboardData {
-	grouped := make(map[string][]Task)
+func buildDashboardData(tasks []db.Task, tags []string) DashboardData {
+	grouped := make(map[string][]db.Task)
 	for _, t := range tasks {
 		grouped[t.ProjectTag] = append(grouped[t.ProjectTag], t)
 	}

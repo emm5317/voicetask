@@ -19,6 +19,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/emm5317/voicetask/db"
 	"github.com/emm5317/voicetask/llm"
 )
 
@@ -29,6 +30,7 @@ var staticFS embed.FS
 type App struct {
 	cfg      *Config
 	pool     *pgxpool.Pool
+	queries  *db.Queries
 	hub      *SSEHub
 	llm      llm.Provider
 	renderer *Renderer
@@ -65,6 +67,7 @@ func main() {
 	app := &App{
 		cfg:      cfg,
 		pool:     pool,
+		queries:  db.New(pool),
 		hub:      NewSSEHub(),
 		llm:      provider,
 		renderer: NewRenderer(),

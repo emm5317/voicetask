@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/emm5317/voicetask/db"
 	"github.com/emm5317/voicetask/llm"
 )
 
@@ -56,6 +57,7 @@ func handlerTestApp(t *testing.T) (*App, *fiber.App) {
 	app := &App{
 		cfg:      cfg,
 		pool:     pool,
+		queries:  db.New(pool),
 		hub:      NewSSEHub(),
 		renderer: NewRenderer(),
 		llm: &mockLLMProvider{
@@ -123,8 +125,8 @@ func TestHandleToggleTask(t *testing.T) {
 	app, server := handlerTestApp(t)
 
 	// Create a task directly in DB
-	task := Task{Title: "Toggle test", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(context.Background(), app.pool, &task); err != nil {
+	task, err := app.queries.InsertTask(context.Background(), db.InsertTaskParams{Title: "Toggle test", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
@@ -152,8 +154,8 @@ func TestHandleDeleteTask(t *testing.T) {
 	app, server := handlerTestApp(t)
 
 	// Create a task
-	task := Task{Title: "Delete me", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(context.Background(), app.pool, &task); err != nil {
+	task, err := app.queries.InsertTask(context.Background(), db.InsertTaskParams{Title: "Delete me", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
@@ -178,15 +180,14 @@ func TestHandleClearCompleted(t *testing.T) {
 	ctx := context.Background()
 
 	// Create two tasks, complete one
-	t1 := Task{Title: "Keep this", ProjectTag: "personal", Priority: "normal"}
-	t2 := Task{Title: "Clear this", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(ctx, app.pool, &t1); err != nil {
+	if _, err := app.queries.InsertTask(ctx, db.InsertTaskParams{Title: "Keep this", ProjectTag: "personal", Priority: "normal"}); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	if err := InsertTask(ctx, app.pool, &t2); err != nil {
+	t2, err := app.queries.InsertTask(ctx, db.InsertTaskParams{Title: "Clear this", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
-	if _, err := ToggleTask(ctx, app.pool, t2.ID); err != nil {
+	if _, err := app.queries.ToggleTask(ctx, t2.ID); err != nil {
 		t.Fatalf("toggle: %v", err)
 	}
 
@@ -240,8 +241,7 @@ func TestHandleTaskList(t *testing.T) {
 	app, server := handlerTestApp(t)
 	ctx := context.Background()
 
-	task := Task{Title: "List test task", ProjectTag: "personal", Priority: "high"}
-	if err := InsertTask(ctx, app.pool, &task); err != nil {
+	if _, err := app.queries.InsertTask(ctx, db.InsertTaskParams{Title: "List test task", ProjectTag: "personal", Priority: "high"}); err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 

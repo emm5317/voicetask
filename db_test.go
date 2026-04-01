@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/emm5317/voicetask/db"
 )
 
-func testPool(t *testing.T) *pgxpool.Pool {
+func testPool(t *testing.T) (*pgxpool.Pool, *db.Queries) {
 	t.Helper()
 	if testing.Short() {
 		t.Skip("skipping DB test in short mode")
@@ -35,34 +37,34 @@ func testPool(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("truncate: %v", err)
 	}
 
-	return pool
+	return pool, db.New(pool)
 }
 
 func TestInsertAndListTasks(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
 	// Insert three tasks with different priorities and tags
-	tasks := []Task{
+	params := []db.InsertTaskParams{
 		{Title: "Urgent legal task", ProjectTag: "campbells", Priority: "urgent"},
 		{Title: "Normal dev task", ProjectTag: "clientsite", Priority: "normal"},
 		{Title: "Low personal task", ProjectTag: "personal", Priority: "low"},
 	}
-	for i := range tasks {
-		if err := InsertTask(ctx, pool, &tasks[i]); err != nil {
+	for i, p := range params {
+		task, err := queries.InsertTask(ctx, p)
+		if err != nil {
 			t.Fatalf("insert task %d: %v", i, err)
 		}
-		if tasks[i].ID == "" {
+		if task.ID == "" {
 			t.Fatalf("task %d: expected ID to be set", i)
 		}
-		if tasks[i].CreatedAt.IsZero() {
+		if task.CreatedAt.IsZero() {
 			t.Fatalf("task %d: expected created_at to be set", i)
 		}
 	}
 
 	// List and verify order: grouped by project_tag, then by priority within group
-	listed, err := ListTasks(ctx, pool)
+	listed, err := queries.ListTasks(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -83,17 +85,16 @@ func TestInsertAndListTasks(t *testing.T) {
 }
 
 func TestToggleTask(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
-	task := Task{Title: "Toggle me", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(ctx, pool, &task); err != nil {
+	task, err := queries.InsertTask(ctx, db.InsertTaskParams{Title: "Toggle me", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
 	// Toggle to completed
-	toggled, err := ToggleTask(ctx, pool, task.ID)
+	toggled, err := queries.ToggleTask(ctx, task.ID)
 	if err != nil {
 		t.Fatalf("toggle: %v", err)
 	}
@@ -105,7 +106,7 @@ func TestToggleTask(t *testing.T) {
 	}
 
 	// Toggle back to incomplete
-	toggled, err = ToggleTask(ctx, pool, task.ID)
+	toggled, err = queries.ToggleTask(ctx, task.ID)
 	if err != nil {
 		t.Fatalf("toggle back: %v", err)
 	}
@@ -118,17 +119,16 @@ func TestToggleTask(t *testing.T) {
 }
 
 func TestUpdateTask(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
-	task := Task{Title: "Original title", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(ctx, pool, &task); err != nil {
+	task, err := queries.InsertTask(ctx, db.InsertTaskParams{Title: "Original title", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
 	// Update only title (empty strings leave other fields unchanged)
-	updated, err := UpdateTask(ctx, pool, task.ID, "New title", "", "")
+	updated, err := queries.UpdateTask(ctx, db.UpdateTaskParams{ID: task.ID, Title: "New title", ProjectTag: "", Priority: ""})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
@@ -144,20 +144,23 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
-	task := Task{Title: "Delete me", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(ctx, pool, &task); err != nil {
+	task, err := queries.InsertTask(ctx, db.InsertTaskParams{Title: "Delete me", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
-	if err := DeleteTask(ctx, pool, task.ID); err != nil {
+	rows, err := queries.DeleteTask(ctx, task.ID)
+	if err != nil {
 		t.Fatalf("delete: %v", err)
 	}
+	if rows != 1 {
+		t.Errorf("expected 1 row affected, got %d", rows)
+	}
 
-	tasks, err := ListTasks(ctx, pool)
+	tasks, err := queries.ListTasks(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -165,31 +168,35 @@ func TestDeleteTask(t *testing.T) {
 		t.Errorf("expected 0 tasks after delete, got %d", len(tasks))
 	}
 
-	// Deleting again should return not found
-	if err := DeleteTask(ctx, pool, task.ID); err == nil {
-		t.Error("expected error deleting non-existent task")
+	// Deleting again should return 0 rows
+	rows, err = queries.DeleteTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("delete again: %v", err)
+	}
+	if rows != 0 {
+		t.Errorf("expected 0 rows on second delete, got %d", rows)
 	}
 }
 
 func TestClearCompleted(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
 	// Insert two tasks, complete one
-	t1 := Task{Title: "Keep me", ProjectTag: "personal", Priority: "normal"}
-	t2 := Task{Title: "Clear me", ProjectTag: "personal", Priority: "normal"}
-	if err := InsertTask(ctx, pool, &t1); err != nil {
+	t1, err := queries.InsertTask(ctx, db.InsertTaskParams{Title: "Keep me", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert t1: %v", err)
 	}
-	if err := InsertTask(ctx, pool, &t2); err != nil {
+	t2, err := queries.InsertTask(ctx, db.InsertTaskParams{Title: "Clear me", ProjectTag: "personal", Priority: "normal"})
+	if err != nil {
 		t.Fatalf("insert t2: %v", err)
 	}
-	if _, err := ToggleTask(ctx, pool, t2.ID); err != nil {
+	_ = t1
+	if _, err := queries.ToggleTask(ctx, t2.ID); err != nil {
 		t.Fatalf("toggle t2: %v", err)
 	}
 
-	cleared, err := ClearCompleted(ctx, pool)
+	cleared, err := queries.ClearCompleted(ctx)
 	if err != nil {
 		t.Fatalf("clear: %v", err)
 	}
@@ -197,7 +204,7 @@ func TestClearCompleted(t *testing.T) {
 		t.Errorf("expected 1 cleared, got %d", cleared)
 	}
 
-	tasks, err := ListTasks(ctx, pool)
+	tasks, err := queries.ListTasks(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -210,24 +217,23 @@ func TestClearCompleted(t *testing.T) {
 }
 
 func TestInsertTaskWithDeadline(t *testing.T) {
-	pool := testPool(t)
-	defer pool.Close()
+	_, queries := testPool(t)
 	ctx := context.Background()
 
 	deadline := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC)
 	transcript := "draft motion by april 15"
-	task := Task{
+	task, err := queries.InsertTask(ctx, db.InsertTaskParams{
 		Title:         "Draft motion to compel",
 		ProjectTag:    "campbells",
 		Priority:      "urgent",
 		Deadline:      &deadline,
 		RawTranscript: &transcript,
-	}
-	if err := InsertTask(ctx, pool, &task); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
 
-	tasks, err := ListTasks(ctx, pool)
+	tasks, err := queries.ListTasks(ctx)
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
@@ -243,4 +249,5 @@ func TestInsertTaskWithDeadline(t *testing.T) {
 	if tasks[0].RawTranscript == nil || *tasks[0].RawTranscript != transcript {
 		t.Errorf("raw_transcript: got %v, want %q", tasks[0].RawTranscript, transcript)
 	}
+	_ = task
 }

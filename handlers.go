@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/emm5317/voicetask/db"
 	"github.com/emm5317/voicetask/llm"
 )
 
@@ -17,7 +18,7 @@ const maxInputLength = 2000
 
 // HandleDashboard serves the main page.
 func (a *App) HandleDashboard(c *fiber.Ctx) error {
-	tasks, err := ListTasks(c.UserContext(), a.pool)
+	tasks, err := a.queries.ListTasks(c.UserContext())
 	if err != nil {
 		slog.Error("list tasks", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load tasks")
@@ -60,7 +61,7 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 	}
 
 	for _, et := range extracted {
-		task := Task{
+		params := db.InsertTaskParams{
 			Title:         et.Title,
 			ProjectTag:    et.ProjectTag,
 			Priority:      et.Priority,
@@ -69,14 +70,15 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 
 		if et.Deadline != "" {
 			if d, err := time.Parse("2006-01-02", et.Deadline); err == nil {
-				task.Deadline = &d
+				params.Deadline = &d
 			} else {
 				slog.Warn("invalid deadline from LLM", "deadline", et.Deadline, "err", err)
 			}
 		}
 
-		if err := InsertTask(c.UserContext(), a.pool, &task); err != nil {
-			slog.Error("insert task", "err", err, "title", task.Title)
+		task, err := a.queries.InsertTask(c.UserContext(), params)
+		if err != nil {
+			slog.Error("insert task", "err", err, "title", params.Title)
 			continue
 		}
 		slog.Info("task created", "id", task.ID, "title", task.Title, "tag", task.ProjectTag, "priority", task.Priority)
@@ -93,17 +95,20 @@ func (a *App) HandleUpdateTask(c *fiber.Ctx) error {
 
 	switch action {
 	case "toggle":
-		if _, err := ToggleTask(c.UserContext(), a.pool, id); err != nil {
+		if _, err := a.queries.ToggleTask(c.UserContext(), id); err != nil {
 			slog.Error("toggle task", "id", id, "err", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to toggle task")
 		}
 		slog.Info("task toggled", "id", id)
 
 	case "edit":
-		title := c.FormValue("title")
-		tag := c.FormValue("project_tag")
-		priority := c.FormValue("priority")
-		if _, err := UpdateTask(c.UserContext(), a.pool, id, title, tag, priority); err != nil {
+		params := db.UpdateTaskParams{
+			ID:         id,
+			Title:      c.FormValue("title"),
+			ProjectTag: c.FormValue("project_tag"),
+			Priority:   c.FormValue("priority"),
+		}
+		if _, err := a.queries.UpdateTask(c.UserContext(), params); err != nil {
 			slog.Error("update task", "id", id, "err", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update task")
 		}
@@ -120,9 +125,13 @@ func (a *App) HandleUpdateTask(c *fiber.Ctx) error {
 // HandleDeleteTask handles DELETE /tasks/:id.
 func (a *App) HandleDeleteTask(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if err := DeleteTask(c.UserContext(), a.pool, id); err != nil {
+	rows, err := a.queries.DeleteTask(c.UserContext(), id)
+	if err != nil {
 		slog.Error("delete task", "id", id, "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to delete task")
+	}
+	if rows == 0 {
+		return c.Status(fiber.StatusNotFound).SendString("Task not found")
 	}
 	slog.Info("task deleted", "id", id)
 
@@ -132,7 +141,7 @@ func (a *App) HandleDeleteTask(c *fiber.Ctx) error {
 
 // HandleClearCompleted handles POST /tasks/clear.
 func (a *App) HandleClearCompleted(c *fiber.Ctx) error {
-	count, err := ClearCompleted(c.UserContext(), a.pool)
+	count, err := a.queries.ClearCompleted(c.UserContext())
 	if err != nil {
 		slog.Error("clear completed", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to clear tasks")
@@ -156,7 +165,11 @@ func (a *App) HandleReorderTasks(c *fiber.Ctx) error {
 	}
 
 	for _, item := range items {
-		if err := UpdateSortOrder(c.UserContext(), a.pool, item.ID, item.SortOrder); err != nil {
+		_, err := a.queries.UpdateSortOrder(c.UserContext(), db.UpdateSortOrderParams{
+			ID:        item.ID,
+			SortOrder: int32(item.SortOrder),
+		})
+		if err != nil {
 			slog.Error("reorder task", "id", item.ID, "err", err)
 		}
 	}
@@ -173,7 +186,7 @@ func (a *App) HandleTaskList(c *fiber.Ctx) error {
 
 // renderTaskList is a helper that re-queries tasks and returns the HTML partial.
 func (a *App) renderTaskList(c *fiber.Ctx) error {
-	tasks, err := ListTasks(c.UserContext(), a.pool)
+	tasks, err := a.queries.ListTasks(c.UserContext())
 	if err != nil {
 		slog.Error("list tasks", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load tasks")
@@ -188,7 +201,7 @@ func (a *App) renderTaskList(c *fiber.Ctx) error {
 
 // HandleExportCSV streams all tasks as a CSV download.
 func (a *App) HandleExportCSV(c *fiber.Ctx) error {
-	tasks, err := ListTasks(c.UserContext(), a.pool)
+	tasks, err := a.queries.ListTasks(c.UserContext())
 	if err != nil {
 		slog.Error("export csv", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Export failed")
@@ -216,7 +229,7 @@ func (a *App) HandleExportCSV(c *fiber.Ctx) error {
 
 // HandleExportJSON streams all tasks as a JSON download.
 func (a *App) HandleExportJSON(c *fiber.Ctx) error {
-	tasks, err := ListTasks(c.UserContext(), a.pool)
+	tasks, err := a.queries.ListTasks(c.UserContext())
 	if err != nil {
 		slog.Error("export json", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Export failed")
