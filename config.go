@@ -32,7 +32,7 @@ func LoadConfig() (*Config, error) {
 		OpenAIKey:      os.Getenv("OPENAI_API_KEY"),
 		GroqKey:        os.Getenv("GROQ_API_KEY"),
 		OllamaURL:      envOrDefault("OLLAMA_URL", "http://localhost:11434"),
-		ProjectTags:    parseTags(envOrDefault("PROJECT_TAGS", "clientsite,campbells,makinen,tradebot,personal,home")),
+		ProjectTags:    parseTags(envOrDefault("PROJECT_TAGS", "campbells,personal,sedalia,BofA,gritton,diment,constellation,national life,cinfin")),
 	}
 
 	if cfg.DatabaseURL == "" {
