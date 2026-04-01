@@ -19,6 +19,16 @@ type Config struct {
 	GroqKey        string
 	OllamaURL      string
 	ProjectTags    []string
+	// Ntfy push notifications
+	NtfyURL   string
+	NtfyTopic string
+	// Email digest
+	SMTPHost     string
+	SMTPPort     string
+	SMTPUser     string
+	SMTPPassword string
+	EmailTo      string
+	DigestHour   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -34,6 +44,14 @@ func LoadConfig() (*Config, error) {
 		GroqKey:        os.Getenv("GROQ_API_KEY"),
 		OllamaURL:      envOrDefault("OLLAMA_URL", "http://localhost:11434"),
 		ProjectTags:    parseTags(envOrDefault("PROJECT_TAGS", "campbells,personal,sedalia,BofA,gritton,diment,constellation,national life,cinfin")),
+		NtfyURL:        os.Getenv("NTFY_URL"),
+		NtfyTopic:      os.Getenv("NTFY_TOPIC"),
+		SMTPHost:        os.Getenv("SMTP_HOST"),
+		SMTPPort:        envOrDefault("SMTP_PORT", "587"),
+		SMTPUser:        os.Getenv("SMTP_USER"),
+		SMTPPassword:    os.Getenv("SMTP_PASSWORD"),
+		EmailTo:         os.Getenv("EMAIL_TO"),
+		DigestHour:      envOrDefault("DIGEST_HOUR", "7"),
 	}
 
 	if cfg.DatabaseURL == "" {

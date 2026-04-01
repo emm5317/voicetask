@@ -126,6 +126,8 @@ func main() {
 	protected.Get("/export/csv", app.HandleExportCSV)
 	protected.Get("/export/json", app.HandleExportJSON)
 
+	app.startDigestScheduler()
+
 	go func() {
 		slog.Info("server starting", "port", cfg.Port, "llm", cfg.LLMProvider)
 		if err := server.Listen(":" + cfg.Port); err != nil {

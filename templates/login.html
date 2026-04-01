@@ -19,63 +19,32 @@
         }
         .card {
             background: #161614; padding: 2.5rem; border-radius: 16px;
-            width: 100%; max-width: 340px;
-            border: 1px solid #242220;
-            animation: fadeIn 0.5s ease both;
+            width: 100%; max-width: 340px; border: 1px solid #242220;
         }
-        .wordmark {
-            display: flex; align-items: baseline; gap: 1px;
-            justify-content: center; margin-bottom: 2rem;
-        }
-        .wordmark-voice {
-            font-family: 'Instrument Serif', serif;
-            font-size: 28px; color: #c8c4be; letter-spacing: -0.01em;
-        }
-        .wordmark-task {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 19px; font-weight: 700; color: #d4915c;
-            letter-spacing: 0.06em; text-transform: uppercase;
-            position: relative; top: 0.5px;
-        }
-        .error {
-            color: #e8655c; font-size: 13px; margin-bottom: 1rem;
-            text-align: center; font-weight: 500;
-        }
+        .wordmark { display:flex; align-items:baseline; gap:1px; justify-content:center; margin-bottom:2rem; }
         input[type="password"] {
-            width: 100%; padding: 14px 16px;
-            border: 1px solid #2a2820; border-radius: 12px;
-            background: #0f0f0d; color: #dedad4;
-            font-size: 15px; font-family: 'Plus Jakarta Sans', sans-serif;
-            margin-bottom: 1rem;
+            width:100%; padding:14px 16px; border:1px solid #2a2820; border-radius:12px;
+            background:#0f0f0d; color:#dedad4; font-size:15px;
+            font-family:'Plus Jakarta Sans',sans-serif; margin-bottom:1rem;
         }
-        input[type="password"]::placeholder { color: #3e3c38; }
-        input[type="password"]:focus {
-            outline: none; border-color: #d4915c60;
-        }
+        input[type="password"]::placeholder { color:#3e3c38; }
+        input[type="password"]:focus { outline:none; border-color:#d4915c60; }
         button[type="submit"] {
-            width: 100%; padding: 14px;
-            background: linear-gradient(140deg, #a87040, #d4915c);
-            color: #0f0f0d; border: none; border-radius: 12px;
-            font-size: 15px; font-weight: 600; cursor: pointer;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            transition: opacity 0.2s ease;
+            width:100%; padding:14px; background:linear-gradient(140deg,#a87040,#d4915c);
+            color:#0f0f0d; border:none; border-radius:12px; font-size:15px; font-weight:600;
+            cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:opacity 0.2s;
         }
-        button[type="submit"]:hover { opacity: 0.9; }
-        button[type="submit"]:focus-visible {
-            outline: 2px solid #d4915c60; outline-offset: 2px;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        button[type="submit"]:hover { opacity:0.9; }
+        .error { color:#e8655c; font-size:13px; margin-bottom:1rem; text-align:center; font-weight:500; }
     </style>
 </head>
 <body>
     <div class="card">
         <div class="wordmark">
-            <span class="wordmark-voice">voice</span>
-            <span class="wordmark-task">task</span>
+            <span style="font-family:'Instrument Serif',serif; font-size:28px; color:#c8c4be;">voice</span>
+            <span style="font-family:'Plus Jakarta Sans',sans-serif; font-size:19px; font-weight:700; color:#d4915c; letter-spacing:0.06em; text-transform:uppercase;">task</span>
         </div>
-        {{if .Error}}
-        <div class="error">{{.Error}}</div>
-        {{end}}
+        {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
         <form method="POST" action="/auth">
             <input type="password" name="passphrase" placeholder="Passphrase" autofocus required>
             <button type="submit">Sign In</button>

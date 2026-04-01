@@ -82,6 +82,7 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 			continue
 		}
 		slog.Info("task created", "id", task.ID, "title", task.Title, "tag", task.ProjectTag, "priority", task.Priority)
+		a.notifyTaskCreated(task.Title, task.ProjectTag, task.Priority)
 	}
 
 	a.hub.Broadcast("tasks-updated", "reload")
