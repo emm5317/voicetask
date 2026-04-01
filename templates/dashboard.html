@@ -105,7 +105,7 @@
 
 <!-- SSE listener (hidden, triggers task list refresh) -->
 <div hx-ext="sse" sse-connect="/tasks/stream" style="display:none;">
-    <div hx-get="/" hx-trigger="sse:tasks-updated" hx-target="#task-list" hx-select="#task-list" hx-swap="innerHTML"></div>
+    <div hx-get="/tasks/list" hx-trigger="sse:tasks-updated" hx-target="#task-list" hx-swap="outerHTML"></div>
 </div>
 
 <!-- Task list (HTMX swap target) -->

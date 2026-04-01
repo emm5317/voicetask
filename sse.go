@@ -72,7 +72,8 @@ func (h *SSEHub) HandleStream(c *fiber.Ctx) error {
 		ch := h.Subscribe()
 		defer h.Unsubscribe(ch)
 
-		// Send initial keepalive so the client knows the connection is open
+		// Set reconnection interval and send initial keepalive
+		fmt.Fprintf(w, "retry: 5000\n\n")
 		fmt.Fprintf(w, ": keepalive\n\n")
 		w.Flush()
 

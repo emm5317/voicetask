@@ -104,8 +104,24 @@
 </head>
 <body>
     <div class="top-accent"></div>
+    <!-- Error toast -->
+    <div id="error-toast" style="position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:100; display:none;">
+        <div style="background:#e8655c18; border:1px solid #e8655c30; color:#e8655c; padding:10px 20px; border-radius:10px; font-size:13px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif; backdrop-filter:blur(8px);">
+            Something went wrong. Please try again.
+        </div>
+    </div>
     <div style="max-width:620px; margin:0 auto; padding:0 24px 100px;">
         {{template "content" .}}
     </div>
+    <script>
+    document.body.addEventListener('htmx:responseError', function() {
+        var toast = document.getElementById('error-toast');
+        toast.style.display = 'block';
+        toast.style.animation = 'fadeIn 0.2s ease both';
+        setTimeout(function() {
+            toast.style.display = 'none';
+        }, 3000);
+    });
+    </script>
 </body>
 </html>

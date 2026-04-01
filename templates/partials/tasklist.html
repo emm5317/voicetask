@@ -88,12 +88,23 @@
                     {{end}}
                     {{end}}
 
-                    <!-- Delete -->
-                    <button class="delete-btn" hx-delete="/tasks/{{$task.ID}}" hx-target="#task-list" hx-swap="innerHTML" hx-confirm="Delete this task?"
-                            aria-label="Delete task"
-                            style="width:44px; height:44px; border-radius:8px; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; font-weight:300;">
-                        ×
-                    </button>
+                    <!-- Delete with inline confirm -->
+                    <div x-data="{ confirming: false }" style="flex-shrink:0;">
+                        <button x-show="!confirming" @click="confirming = true" class="delete-btn" aria-label="Delete task"
+                                style="width:44px; height:44px; border-radius:8px; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:300;">
+                            ×
+                        </button>
+                        <div x-show="confirming" x-cloak style="display:flex; gap:4px; align-items:center; animation:fadeIn 0.15s ease both;">
+                            <button hx-delete="/tasks/{{$task.ID}}" hx-target="#task-list" hx-swap="outerHTML"
+                                    style="font-size:10px; font-weight:600; color:#e8655c; background:#e8655c14; border:none; border-radius:6px; padding:6px 10px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;">
+                                Delete
+                            </button>
+                            <button @click="confirming = false"
+                                    style="font-size:10px; color:#4a4840; background:transparent; border:none; padding:6px 4px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             {{end}}

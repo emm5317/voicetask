@@ -135,6 +135,11 @@ func (a *App) HandleClearCompleted(c *fiber.Ctx) error {
 	return a.renderTaskList(c)
 }
 
+// HandleTaskList returns just the task list partial (used by SSE refresh).
+func (a *App) HandleTaskList(c *fiber.Ctx) error {
+	return a.renderTaskList(c)
+}
+
 // renderTaskList is a helper that re-queries tasks and returns the HTML partial.
 func (a *App) renderTaskList(c *fiber.Ctx) error {
 	tasks, err := ListTasks(c.UserContext(), a.pool)

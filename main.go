@@ -2,14 +2,18 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
@@ -18,7 +22,9 @@ import (
 	"github.com/emm5317/voicetask/llm"
 )
 
-// App holds all dependencies for the application.
+//go:embed static/*
+var staticFS embed.FS
+
 // App holds all dependencies for the application.
 type App struct {
 	cfg      *Config
@@ -69,8 +75,11 @@ func main() {
 		ServerHeader: "VoiceTask",
 	})
 
-	// Serve static files (manifest.json, etc.)
-	server.Static("/static", "./static")
+	// Serve embedded static files (manifest.json, etc.)
+	staticSub, _ := fs.Sub(staticFS, "static")
+	server.Use("/static", filesystem.New(filesystem.Config{
+		Root: http.FS(staticSub),
+	}))
 
 	// Global middleware
 	server.Use(recover.New())
@@ -105,6 +114,7 @@ func main() {
 	}))
 
 	protected.Get("/", app.HandleDashboard)
+	protected.Get("/tasks/list", app.HandleTaskList)
 	protected.Post("/tasks", app.HandleCreateTask)
 	protected.Patch("/tasks/:id", app.HandleUpdateTask)
 	protected.Delete("/tasks/:id", app.HandleDeleteTask)
