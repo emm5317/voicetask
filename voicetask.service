@@ -1,0 +1,15 @@
+[Unit]
+Description=VoiceTask - Voice-to-Task Capture
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/voicetask
+ExecStart=/opt/voicetask/voicetask
+EnvironmentFile=/opt/voicetask/.env
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
