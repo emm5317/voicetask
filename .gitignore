@@ -2,8 +2,16 @@
 voicetask
 *.exe
 
-# Environment
+# Environment / Secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
+keys/
 
 # IDE
 .idea/
