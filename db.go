@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+//go:embed db/migrations/001_create_tasks.sql
+var migrationSQL string
 
 // Task represents a single task in the database.
 type Task struct {
@@ -46,13 +49,9 @@ func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// RunMigrations executes the SQL migration files.
+// RunMigrations executes the embedded SQL migration.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	sql, err := os.ReadFile("db/migrations/001_create_tasks.sql")
-	if err != nil {
-		return fmt.Errorf("read migration: %w", err)
-	}
-	if _, err := pool.Exec(ctx, string(sql)); err != nil {
+	if _, err := pool.Exec(ctx, migrationSQL); err != nil {
 		return fmt.Errorf("exec migration: %w", err)
 	}
 	return nil
