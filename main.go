@@ -19,11 +19,13 @@ import (
 )
 
 // App holds all dependencies for the application.
+// App holds all dependencies for the application.
 type App struct {
-	cfg  *Config
-	pool *pgxpool.Pool
-	hub  *SSEHub
-	llm  llm.Provider
+	cfg      *Config
+	pool     *pgxpool.Pool
+	hub      *SSEHub
+	llm      llm.Provider
+	renderer *Renderer
 }
 
 func main() {
@@ -55,16 +57,20 @@ func main() {
 	}
 
 	app := &App{
-		cfg:  cfg,
-		pool: pool,
-		hub:  NewSSEHub(),
-		llm:  provider,
+		cfg:      cfg,
+		pool:     pool,
+		hub:      NewSSEHub(),
+		llm:      provider,
+		renderer: NewRenderer(),
 	}
 
 	server := fiber.New(fiber.Config{
 		AppName:      "VoiceTask",
 		ServerHeader: "VoiceTask",
 	})
+
+	// Serve static files (manifest.json, etc.)
+	server.Static("/static", "./static")
 
 	// Global middleware
 	server.Use(recover.New())

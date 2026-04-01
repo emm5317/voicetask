@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>VoiceTask</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0f0f0d">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #0f0f0d; color: #c8c4be;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh; min-height: 100dvh;
+        }
+
+        /* Animations */
+        @keyframes micPulse {
+            0% { transform: scale(0.96); opacity: 0.5; }
+            100% { transform: scale(1.35); opacity: 0; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes inputGlow {
+            0%, 100% { border-color: #242220; }
+            50% { border-color: #d4915c40; }
+        }
+        @keyframes waveBar {
+            0% { height: 3px; opacity: 0.25; }
+            100% { height: 12px; opacity: 0.7; }
+        }
+
+        /* Focus */
+        :focus-visible {
+            outline: 2px solid #d4915c60;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        input:focus-visible { outline-offset: -2px; border-radius: 14px; }
+
+        /* Input */
+        input::placeholder { color: #3e3c38; }
+        input:focus::placeholder { color: #504e48; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e1d1a; border-radius: 3px; }
+
+        /* Task row hover */
+        .task-row { transition: background 0.15s ease; }
+        .task-row:hover { background: rgba(255,255,255,0.025); }
+
+        /* Delete button */
+        .delete-btn {
+            color: #2e2c28; transition: all 0.15s ease;
+        }
+        .delete-btn:hover {
+            background: #e8655c14; color: #e8655c;
+        }
+
+        /* Touch devices: always show delete */
+        @media (pointer: coarse) {
+            .delete-btn { color: #3e3c38; }
+        }
+
+        /* HTMX loading indicator */
+        .htmx-indicator {
+            display: none;
+        }
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator {
+            display: inline-flex;
+        }
+
+        /* Clear button */
+        .clear-btn {
+            transition: all 0.2s ease;
+        }
+        .clear-btn:hover {
+            border-color: #333028 !important; color: #5a5850 !important;
+        }
+
+        /* Top accent line */
+        .top-accent {
+            position: fixed; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent 10%, #d4915c30 50%, transparent 90%);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-accent"></div>
+    <div style="max-width:620px; margin:0 auto; padding:0 24px 100px;">
+        {{template "content" .}}
+    </div>
+</body>
+</html>

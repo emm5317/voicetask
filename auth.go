@@ -44,7 +44,7 @@ func (a *App) HandleLoginPage(c *fiber.Ctx) error {
 	if cookie != "" && cookie == a.sessionToken() {
 		return c.Redirect("/")
 	}
-	return c.Type("html").SendString(loginHTML(""))
+	return a.renderLogin(c, "")
 }
 
 // HandleAuth processes the login form submission.
@@ -53,7 +53,7 @@ func (a *App) HandleAuth(c *fiber.Ctx) error {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(a.cfg.PassphraseHash), []byte(passphrase)); err != nil {
 		slog.Warn("login failed", "ip", c.IP())
-		return c.Type("html").SendString(loginHTML("Invalid passphrase"))
+		return a.renderLogin(c, "Invalid passphrase")
 	}
 
 	c.Cookie(&fiber.Cookie{
@@ -96,28 +96,11 @@ func (a *App) sessionToken() string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
-// loginHTML returns a minimal login page. This will be replaced by
-// html/template rendering in Phase 5, but provides a working auth
-// flow for Phase 4 testing.
-func loginHTML(errMsg string) string {
-	errDiv := ""
-	if errMsg != "" {
-		errDiv = `<div style="color:#ef4444;margin-bottom:1rem">` + errMsg + `</div>`
+func (a *App) renderLogin(c *fiber.Ctx, errMsg string) error {
+	html, err := a.renderer.RenderLogin(errMsg)
+	if err != nil {
+		slog.Error("render login", "err", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render login page")
 	}
-	return `<!DOCTYPE html>
-<html><head><title>VoiceTask - Login</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-body{background:#18181b;color:#e4e4e7;font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-form{background:#27272a;padding:2rem;border-radius:0.5rem;width:100%;max-width:320px}
-h1{margin:0 0 1.5rem;font-size:1.25rem;text-align:center}
-input{width:100%;padding:0.75rem;border:1px solid #3f3f46;border-radius:0.375rem;background:#18181b;color:#e4e4e7;font-size:1rem;margin-bottom:1rem;box-sizing:border-box}
-button{width:100%;padding:0.75rem;background:#d97706;color:#18181b;border:none;border-radius:0.375rem;font-size:1rem;font-weight:600;cursor:pointer}
-button:hover{background:#b45309}
-</style></head><body>
-<form method="POST" action="/auth">
-<h1>VoiceTask</h1>` + errDiv + `
-<input type="password" name="passphrase" placeholder="Passphrase" autofocus required>
-<button type="submit">Sign In</button>
-</form></body></html>`
+	return c.Type("html").SendString(html)
 }

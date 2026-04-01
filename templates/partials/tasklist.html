@@ -1,0 +1,105 @@
+{{define "tasklist.html"}}
+<div id="task-list">
+{{if eq (len .Groups) 0}}
+    <!-- Empty state -->
+    <div style="text-align:center; padding:72px 20px; animation:fadeIn 0.5s ease both;">
+        <div style="display:flex; justify-content:center; gap:3px; margin-bottom:20px; opacity:0.2;">
+            <div style="width:3px; height:8px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:14px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:22px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:28px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:20px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:11px; border-radius:2px; background:#d4915c;"></div>
+            <div style="width:3px; height:7px; border-radius:2px; background:#d4915c;"></div>
+        </div>
+        <p style="font-size:16px; color:#4a4840; font-family:'Instrument Serif',serif; font-style:italic; line-height:1.5;">
+            Tap the mic or type to capture a task
+        </p>
+        <p style="font-size:12px; color:#2e2c28; margin-top:8px; font-weight:400;">
+            Voice input is extracted into structured, tagged tasks automatically
+        </p>
+    </div>
+{{else}}
+    {{range $gi, $group := .Groups}}
+    <!-- Project: {{$group.Meta.Label}} -->
+    <div style="margin-bottom:4px; animation:slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;">
+        <!-- Section header -->
+        <div style="display:flex; align-items:center; gap:10px; padding:14px 12px 8px;">
+            <div style="width:3px; height:12px; border-radius:2px; background-color:{{$group.Meta.Accent}}; opacity:0.8;"></div>
+            <span style="font-size:11.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:{{$group.Meta.Accent}}; opacity:0.85;">
+                {{$group.Meta.Label}}
+            </span>
+            <span style="font-size:11px; color:#3e3c38; font-weight:500; font-family:'JetBrains Mono',monospace;">
+                {{$group.OpenCount}}{{if gt $group.DoneCount 0}}<span style="color:#2a2820"> / {{$group.Total}}</span>{{end}}
+            </span>
+            <div style="flex:1"></div>
+            {{if gt $group.DoneCount 0}}
+            <div style="width:40px; height:2px; border-radius:1px; background-color:#1e1d1a;">
+                <div style="width:{{$group.Progress}}%; height:100%; border-radius:1px; background-color:{{$group.Meta.Accent}}; opacity:0.4; transition:width 0.5s ease;"></div>
+            </div>
+            {{end}}
+        </div>
+
+        <!-- Task rows -->
+        <div style="padding-left:4px;">
+            {{range $ti, $task := $group.Tasks}}
+            <div class="task-row" style="display:flex; align-items:center; gap:14px; padding:11px 12px; border-radius:10px; min-height:44px;">
+                <!-- Checkbox -->
+                <button hx-patch="/tasks/{{$task.ID}}" hx-vals='{"action":"toggle"}' hx-target="#task-list" hx-swap="innerHTML"
+                        aria-label="Toggle complete"
+                        style="width:44px; height:44px; border-radius:10px; flex-shrink:0; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; background:transparent; padding:0;">
+                    <div style="width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+                        {{if $task.Completed}}background-color:{{$group.Meta.Accent}}; opacity:0.7;{{else}}border:1.5px solid #333028;{{end}}">
+                        {{if $task.Completed}}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0f0f0e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        {{end}}
+                    </div>
+                </button>
+
+                <!-- Title -->
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:13.5px; line-height:1.5; overflow:hidden; text-overflow:ellipsis;
+                        {{if $task.Completed}}color:#3e3c38; text-decoration:line-through;{{else if eq $task.Priority "urgent"}}color:#eae7e2; font-weight:600;{{else}}color:#c8c4be;{{end}}">
+                        {{$task.Title}}
+                    </div>
+                </div>
+
+                <!-- Metadata -->
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    {{if and (not $task.Completed) $task.Deadline}}
+                    {{$dl := formatDeadline $task.Deadline}}
+                    {{if $dl}}
+                    <span style="font-size:11px; font-weight:600; color:{{$dl.Color}}; font-family:'JetBrains Mono',monospace; letter-spacing:0.01em; white-space:nowrap;
+                        {{if $dl.Hot}}padding:3px 8px; border-radius:6px; background-color:{{$dl.Color}}14;{{else}}padding:3px 6px;{{end}}">
+                        {{$dl.Text}}
+                    </span>
+                    {{end}}
+                    {{end}}
+
+                    {{if not $task.Completed}}
+                    {{$pl := priorityLabel $task.Priority}}
+                    {{if $pl}}
+                    <span style="font-size:9.5px; font-weight:700; color:{{priorityColor $task.Priority}}; letter-spacing:0.08em; font-family:'Plus Jakarta Sans',sans-serif; white-space:nowrap;
+                        {{if eq $task.Priority "urgent"}}padding:3px 7px; border-radius:5px; background-color:#e8655c18;{{else if eq $task.Priority "high"}}padding:3px 7px; border-radius:5px; background-color:#d4975c14;{{else}}padding:3px 7px;{{end}}">
+                        {{$pl}}
+                    </span>
+                    {{end}}
+                    {{end}}
+
+                    <!-- Delete -->
+                    <button class="delete-btn" hx-delete="/tasks/{{$task.ID}}" hx-target="#task-list" hx-swap="innerHTML" hx-confirm="Delete this task?"
+                            aria-label="Delete task"
+                            style="width:44px; height:44px; border-radius:8px; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px; font-weight:300;">
+                        ×
+                    </button>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+{{end}}
+</div>
+{{end}}
