@@ -71,6 +71,8 @@ func main() {
 	server.Use(requestid.New())
 
 	// Public routes (no auth required)
+	server.Get("/setup", HandleSetup)
+	server.Post("/setup", HandleSetup)
 	server.Get("/login", app.HandleLoginPage)
 
 	// Rate limit on auth endpoint: 5 attempts per 15 minutes
