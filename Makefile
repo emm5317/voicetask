@@ -1,4 +1,4 @@
-.PHONY: build build-linux run test deploy hash migrate
+.PHONY: build build-linux run test lint deploy hash migrate
 
 build:
 	go build -o voicetask .
@@ -11,6 +11,9 @@ run:
 
 test:
 	go test ./...
+
+lint:
+	golangci-lint run ./...
 
 deploy: build-linux
 	scp voicetask root@$(SERVER):/opt/voicetask/voicetask

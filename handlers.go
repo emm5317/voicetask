@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -9,6 +12,8 @@ import (
 
 	"github.com/emm5317/voicetask/llm"
 )
+
+const maxInputLength = 2000
 
 // HandleDashboard serves the main page.
 func (a *App) HandleDashboard(c *fiber.Ctx) error {
@@ -31,6 +36,9 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 	input := strings.TrimSpace(c.FormValue("input"))
 	if input == "" {
 		return c.Status(fiber.StatusBadRequest).SendString("Input is required")
+	}
+	if len(input) > maxInputLength {
+		input = input[:maxInputLength]
 	}
 
 	slog.Info("creating task", "input", input, "source", c.FormValue("source"))
@@ -153,4 +161,75 @@ func (a *App) renderTaskList(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render tasks")
 	}
 	return c.Type("html").SendString(html)
+}
+
+// HandleExportCSV streams all tasks as a CSV download.
+func (a *App) HandleExportCSV(c *fiber.Ctx) error {
+	tasks, err := ListTasks(c.UserContext(), a.pool)
+	if err != nil {
+		slog.Error("export csv", "err", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Export failed")
+	}
+
+	c.Set("Content-Disposition", "attachment; filename=voicetask-export.csv")
+	c.Set("Content-Type", "text/csv")
+
+	w := csv.NewWriter(c.Response().BodyWriter())
+	w.Write([]string{"ID", "Title", "Project", "Priority", "Deadline", "Completed", "Created"})
+	for _, t := range tasks {
+		deadline := ""
+		if t.Deadline != nil {
+			deadline = t.Deadline.Format("2006-01-02")
+		}
+		completed := "no"
+		if t.Completed {
+			completed = "yes"
+		}
+		w.Write([]string{t.ID, t.Title, t.ProjectTag, t.Priority, deadline, completed, t.CreatedAt.Format("2006-01-02 15:04")})
+	}
+	w.Flush()
+	return nil
+}
+
+// HandleExportJSON streams all tasks as a JSON download.
+func (a *App) HandleExportJSON(c *fiber.Ctx) error {
+	tasks, err := ListTasks(c.UserContext(), a.pool)
+	if err != nil {
+		slog.Error("export json", "err", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Export failed")
+	}
+
+	c.Set("Content-Disposition", "attachment; filename=voicetask-export.json")
+	c.Set("Content-Type", "application/json")
+
+	type exportTask struct {
+		ID            string  `json:"id"`
+		Title         string  `json:"title"`
+		ProjectTag    string  `json:"project_tag"`
+		Priority      string  `json:"priority"`
+		Deadline      *string `json:"deadline,omitempty"`
+		RawTranscript *string `json:"raw_transcript,omitempty"`
+		Completed     bool    `json:"completed"`
+		CreatedAt     string  `json:"created_at"`
+	}
+
+	export := make([]exportTask, len(tasks))
+	for i, t := range tasks {
+		var deadline *string
+		if t.Deadline != nil {
+			d := t.Deadline.Format("2006-01-02")
+			deadline = &d
+		}
+		export[i] = exportTask{
+			ID: t.ID, Title: t.Title, ProjectTag: t.ProjectTag,
+			Priority: t.Priority, Deadline: deadline, RawTranscript: t.RawTranscript,
+			Completed: t.Completed, CreatedAt: t.CreatedAt.Format(time.RFC3339),
+		}
+	}
+
+	out, err := json.MarshalIndent(map[string]any{"tasks": export, "exported_at": time.Now().Format(time.RFC3339)}, "", "  ")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("marshal: %v", err))
+	}
+	return c.Send(out)
 }
