@@ -143,6 +143,29 @@ func (a *App) HandleClearCompleted(c *fiber.Ctx) error {
 	return a.renderTaskList(c)
 }
 
+// HandleReorderTasks accepts a JSON array of {id, sort_order} pairs and updates sort orders.
+func (a *App) HandleReorderTasks(c *fiber.Ctx) error {
+	type reorderItem struct {
+		ID        string `json:"id"`
+		SortOrder int    `json:"sort_order"`
+	}
+
+	var items []reorderItem
+	if err := json.Unmarshal(c.Body(), &items); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON")
+	}
+
+	for _, item := range items {
+		if err := UpdateSortOrder(c.UserContext(), a.pool, item.ID, item.SortOrder); err != nil {
+			slog.Error("reorder task", "id", item.ID, "err", err)
+		}
+	}
+
+	slog.Info("tasks reordered", "count", len(items))
+	a.hub.Broadcast("tasks-updated", "reload")
+	return c.SendStatus(fiber.StatusOK)
+}
+
 // HandleTaskList returns just the task list partial (used by SSE refresh).
 func (a *App) HandleTaskList(c *fiber.Ctx) error {
 	return a.renderTaskList(c)

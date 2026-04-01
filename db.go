@@ -145,6 +145,18 @@ func ClearCompleted(ctx context.Context, pool *pgxpool.Pool) (int64, error) {
 	return result.RowsAffected(), nil
 }
 
+// UpdateSortOrder updates the sort_order for a single task.
+func UpdateSortOrder(ctx context.Context, pool *pgxpool.Pool, id string, sortOrder int) error {
+	result, err := pool.Exec(ctx, `UPDATE tasks SET sort_order = $2, updated_at = NOW() WHERE id = $1`, id, sortOrder)
+	if err != nil {
+		return fmt.Errorf("update sort order: %w", err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("task not found: %s", id)
+	}
+	return nil
+}
+
 func scanTask(row pgx.Row) (*Task, error) {
 	var t Task
 	err := row.Scan(

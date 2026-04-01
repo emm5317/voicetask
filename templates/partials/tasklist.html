@@ -40,10 +40,10 @@
             {{end}}
         </div>
 
-        <!-- Task rows -->
-        <div style="padding-left:4px;">
+        <!-- Task rows (sortable container) -->
+        <div class="sortable-group" data-tag="{{$group.Tag}}" style="padding-left:4px;">
             {{range $ti, $task := $group.Tasks}}
-            <div class="task-row" style="display:flex; align-items:center; gap:14px; padding:11px 12px; border-radius:10px; min-height:44px;">
+            <div class="task-row" data-id="{{$task.ID}}" style="display:flex; align-items:center; gap:14px; padding:11px 12px; border-radius:10px; min-height:44px; cursor:grab;">
                 <!-- Checkbox -->
                 <button hx-patch="/tasks/{{$task.ID}}" hx-vals='{"action":"toggle"}' hx-target="#task-list" hx-swap="innerHTML"
                         aria-label="Toggle complete"

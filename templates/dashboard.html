@@ -155,7 +155,7 @@ function clock() {
 function voiceCapture() {
     return {
         listening: false,
-        transcript: '',
+        transcript: this.$persist(''),
         lastSource: 'text',
         submitting: false,
         recognition: null,
@@ -224,5 +224,33 @@ function voiceCapture() {
         }
     };
 }
+
+// Initialize SortableJS on each project group after page load and HTMX swaps
+function initSortable() {
+    document.querySelectorAll('.sortable-group').forEach(function(el) {
+        if (el._sortable) el._sortable.destroy();
+        el._sortable = new Sortable(el, {
+            animation: 200,
+            ghostClass: 'sortable-ghost',
+            handle: '.task-row',
+            onEnd: function() {
+                var items = [];
+                el.querySelectorAll('.task-row[data-id]').forEach(function(row, i) {
+                    items.push({ id: row.dataset.id, sort_order: i });
+                });
+                fetch('/tasks/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(items)
+                });
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initSortable);
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target.id === 'task-list') initSortable();
+});
 </script>
 {{end}}

@@ -1,4 +1,4 @@
-.PHONY: build build-linux run test lint deploy hash migrate
+.PHONY: build build-linux run dev test lint deploy hash migrate
 
 build:
 	go build -o voicetask .
@@ -8,6 +8,9 @@ build-linux:
 
 run:
 	go run .
+
+dev:
+	air
 
 test:
 	go test ./...

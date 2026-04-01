@@ -118,6 +118,7 @@ func main() {
 	protected.Post("/tasks", app.HandleCreateTask)
 	protected.Patch("/tasks/:id", app.HandleUpdateTask)
 	protected.Delete("/tasks/:id", app.HandleDeleteTask)
+	protected.Post("/tasks/reorder", app.HandleReorderTasks)
 	protected.Post("/tasks/clear", app.HandleClearCompleted)
 	protected.Get("/export/csv", app.HandleExportCSV)
 	protected.Get("/export/json", app.HandleExportJSON)
