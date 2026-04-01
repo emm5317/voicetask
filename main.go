@@ -48,10 +48,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TEMPORARY: Allow startup without LLM API key (see SETUP_TODO.md)
 	provider, err := newLLMProvider(cfg)
 	if err != nil {
-		slog.Error("llm provider", "err", err)
-		os.Exit(1)
+		slog.Warn("llm provider not configured — task extraction disabled", "err", err)
 	}
 
 	app := &App{

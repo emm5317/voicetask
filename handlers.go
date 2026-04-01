@@ -33,9 +33,15 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 
 	slog.Info("creating task", "input", input, "source", c.FormValue("source"))
 
-	extracted, err := a.llm.ExtractTasks(c.UserContext(), input)
-	if err != nil {
-		slog.Error("llm extraction failed, using fallback", "err", err, "input", input)
+	var extracted []llm.ExtractedTask
+	if a.llm != nil {
+		var err error
+		extracted, err = a.llm.ExtractTasks(c.UserContext(), input)
+		if err != nil {
+			slog.Error("llm extraction failed, using fallback", "err", err, "input", input)
+		}
+	}
+	if len(extracted) == 0 {
 		extracted = []llm.ExtractedTask{{
 			Title:      input,
 			ProjectTag: "personal",
