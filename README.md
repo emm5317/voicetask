@@ -7,7 +7,7 @@ A self-hosted, voice-to-task capture web app. Speak or type on any device — an
 ## How It Works
 
 1. Tap the mic or type a task on any device (phone, tablet, PC)
-2. Browser's Web Speech API transcribes voice on-device
+2. Browser's Web Speech API transcribes voice on-device (continuous mode with 3s silence auto-stop)
 3. Server sends the transcript to an LLM (Claude Sonnet by default)
 4. LLM extracts structured tasks: title, project tag, priority, deadline
 5. Tasks are stored in PostgreSQL and broadcast via SSE
@@ -17,19 +17,24 @@ A single rambling voice note like *"I need to draft that Campbell's motion to co
 
 ## Features
 
-- **Voice capture** — Web Speech API with real-time transcript preview
-- **LLM extraction** — Automatic tagging, prioritization, and deadline parsing
-- **Real-time sync** — SSE broadcasts to all connected devices
+- **Voice capture** — Web Speech API with continuous listening, 3s silence auto-stop, real-time transcript preview
+- **LLM extraction** — Automatic tagging, prioritization, and deadline parsing (conservative defaults — only marks urgent/high when you explicitly say so)
+- **Real-time sync** — SSE broadcasts to all connected devices with 5s auto-reconnect
 - **Multi-provider LLM** — Claude, OpenAI, Groq, or Ollama (switch with one env var)
-- **Dark theme UI** — Warm blacks, amber accents, designed for always-on tablet display
-- **Project grouping** — Tasks grouped by configurable project tags with color coding
+- **Dark/light theme** — Toggle in header, persisted to localStorage. Dark theme optimized for always-on tablet display
+- **Inline task editing** — Double-click or tap edit to change title, project tag, priority, and deadline with date picker
+- **Project grouping** — Tasks grouped by configurable tags with color coding and progress bars
+- **Custom tags** — Type any tag in the edit form (autocomplete suggests existing tags)
 - **Drag-and-drop reorder** — SortableJS within project groups
 - **Priority badges** — Urgent, high, normal, low with color-coded indicators
-- **Deadline formatting** — Overdue, today, tomorrow, day name, or date
+- **Deadline display** — Overdue count, today, tomorrow, or full date (e.g., "Sat, Apr 5")
+- **Push notifications** — Ntfy integration for mobile alerts when tasks are created
+- **Daily digest email** — Morning summary of open tasks via SMTP
 - **PWA support** — Add to home screen on Android/iOS for app-like experience
 - **CSV/JSON export** — Download all tasks for backup or analysis
 - **Single binary** — Templates, migrations, static files all embedded via `go:embed`
 - **Passphrase auth** — bcrypt + HMAC session cookie, single-user, no registration
+- **Rate limiting** — 5 req/15min on auth, 30 req/min on protected routes
 
 ## Tech Stack
 
@@ -115,6 +120,14 @@ All configuration is via environment variables (or `.env` file):
 | `GROQ_API_KEY` | If groq | — | Groq API key |
 | `OLLAMA_URL` | If ollama | `http://localhost:11434` | Ollama endpoint |
 | `PROJECT_TAGS` | No | see below | Comma-separated project tags |
+| `NTFY_URL` | No | — | Ntfy server URL for push notifications |
+| `NTFY_TOPIC` | No | — | Ntfy topic to publish to |
+| `SMTP_HOST` | No | — | SMTP server for daily digest email |
+| `SMTP_PORT` | No | `587` | SMTP port |
+| `SMTP_USER` | No | — | SMTP username |
+| `SMTP_PASSWORD` | No | — | SMTP password |
+| `EMAIL_TO` | No | — | Digest recipient email |
+| `DIGEST_HOUR` | No | `7` | Hour (0-23) to send daily digest |
 
 Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellation,national life,cinfin`
 
@@ -126,7 +139,7 @@ Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellat
 | `POST` | `/auth` | Authenticate (rate limited: 5/15min) |
 | `GET` | `/` | Dashboard |
 | `POST` | `/tasks` | Create task(s) via LLM extraction |
-| `PATCH` | `/tasks/:id` | Toggle complete or edit task |
+| `PATCH` | `/tasks/:id` | Toggle complete, edit task, or update deadline |
 | `DELETE` | `/tasks/:id` | Delete task |
 | `POST` | `/tasks/reorder` | Reorder tasks (drag-and-drop) |
 | `POST` | `/tasks/clear` | Clear all completed tasks |
@@ -154,13 +167,19 @@ The deploy target copies the binary and restarts the systemd service. The binary
 ### Server Setup
 
 1. Install PostgreSQL 16 and Caddy
-2. Create the database and run migrations (automatic on startup)
+2. Create the database (migrations run automatically on startup)
 3. Copy the `Caddyfile` to `/etc/caddy/Caddyfile`
 4. Copy `voicetask.service` to `/etc/systemd/system/`
 5. Create `/opt/voicetask/.env` with your configuration
 6. Enable and start: `systemctl enable --now voicetask`
 
 Caddy auto-provisions HTTPS via Let's Encrypt.
+
+**Note:** On a 512MB droplet, add 1GB swap before building from source:
+```bash
+fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
+```
 
 ## Architecture
 
@@ -171,9 +190,11 @@ Browser → Caddy (HTTPS) → Fiber (recover → requestid → auth → rate lim
 
 - **App struct** — All dependencies (pool, queries, hub, llm, renderer) in one struct. No global state.
 - **SSE hub** — In-memory `map[chan string]bool` with mutex. Non-blocking broadcast, 30s keepalive, 5s reconnect.
-- **LLM provider interface** — Swappable via env var. Claude uses Anthropic API; OpenAI/Groq/Ollama share one implementation.
-- **sqlc** — Type-safe generated queries. Zero hand-written `Scan()` calls.
+- **LLM provider interface** — Swappable via env var. Claude uses Anthropic API; OpenAI/Groq/Ollama share one implementation. Conservative priority defaults — only marks urgent/high when explicitly requested.
+- **sqlc** — Type-safe generated queries with native Go types via overrides. Zero hand-written `Scan()` calls.
 - **embed.FS** — Templates, migrations, and static files baked into the binary.
+- **Ntfy** — Optional push notifications via HTTP POST on task creation. Non-blocking goroutine.
+- **Email digest** — Optional daily summary via SMTP. Background goroutine fires at configured hour.
 
 ## Testing
 
@@ -192,13 +213,13 @@ go test -race ./...          # with race detector
 go test -short ./...         # skip DB-dependent tests
 ```
 
-CI runs lint, test (with Postgres), and build on every push to `main`.
+CI runs lint, test (with Postgres service container), and build on every push to `main`.
 
 ## Browser Compatibility
 
 | Browser | Voice Capture | Notes |
 |---------|--------------|-------|
-| Chrome/Edge | Full support | Google cloud speech engine |
+| Chrome/Edge | Full support | Google cloud speech engine, continuous mode |
 | Safari iOS 14.5+ | Supported | Requires tap gesture to start |
 | Chrome Android | Full support | Most accurate |
 | Firefox | Not supported | Text-only input (mic button hidden) |
