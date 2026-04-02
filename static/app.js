@@ -256,11 +256,15 @@ function timeVoiceNote(entryId) {
     };
 }
 
-// HTMX error toast
-document.body.addEventListener('htmx:responseError', function() {
-    var t = document.getElementById('error-toast');
-    t.style.display='block'; t.style.animation='fadeIn 0.2s ease both';
-    setTimeout(function(){ t.style.display='none'; }, 3000);
+// HTMX error toast — must wait for body to exist since this script loads in <head>
+document.addEventListener('DOMContentLoaded', function() {
+    document.body.addEventListener('htmx:responseError', function() {
+        var t = document.getElementById('error-toast');
+        if (t) {
+            t.style.display='block'; t.style.animation='fadeIn 0.2s ease both';
+            setTimeout(function(){ t.style.display='none'; }, 3000);
+        }
+    });
 });
 
 // SortableJS init
