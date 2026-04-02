@@ -124,7 +124,7 @@ func TestLogin_WrongPassphrase(t *testing.T) {
 	form := url.Values{"passphrase": {"wrongpassword"}}
 	req, _ := http.NewRequest("POST", "/auth", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := server.Test(req)
+	resp, err := server.Test(req, -1)
 	if err != nil {
 		t.Fatalf("request: %v", err)
 	}
