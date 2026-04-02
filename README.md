@@ -2,8 +2,6 @@
 
 A self-hosted, voice-to-task capture web app. Speak or type on any device — an LLM extracts structured, tagged tasks with priorities and deadlines. Tasks sync across all connected devices in real time via Server-Sent Events.
 
-**Monthly cost:** ~$4.77 ($4 DigitalOcean droplet + ~$0.77 Claude Sonnet API)
-
 ## How It Works
 
 1. Tap the mic or type a task on any device (phone, tablet, PC)
