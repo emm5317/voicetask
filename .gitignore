@@ -28,3 +28,12 @@ coverage.out
 
 # Air (live reload)
 tmp/
+
+# Tailwind standalone CLI
+bin/
+
+# Templ generated files
+*_templ.go
+
+# Generated CSS (rebuilt by Tailwind CLI)
+static/styles.css
