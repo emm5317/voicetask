@@ -100,7 +100,6 @@ func NewRenderer() *Renderer {
 		"projectLabel":   func(tag string) string { return getProjectMeta(tag).Label },
 		"priorityColor":  priorityColor,
 		"priorityLabel":  priorityLabel,
-		"seq":          func(n int) []int { s := make([]int, n); for i := range s { s[i] = i }; return s },
 		"fmtDateInput": func(d interface{}) string {
 			switch v := d.(type) {
 			case *time.Time:
@@ -115,12 +114,6 @@ func NewRenderer() *Renderer {
 		"fmtBillable": func(h float64) string { return fmt.Sprintf("%.1f hrs", h) },
 		"fmtTimeOnly": func(t time.Time) string { return t.Local().Format("3:04 PM") },
 		"isoTime": func(t time.Time) string { return t.Format(time.RFC3339) },
-		"fmtDuration": func(secs int) string {
-			h := secs / 3600
-			m := (secs % 3600) / 60
-			if h > 0 { return fmt.Sprintf("%dh %dm", h, m) }
-			return fmt.Sprintf("%dm", m)
-		},
 	}
 
 	tmpl := template.Must(

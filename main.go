@@ -58,10 +58,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TEMPORARY: Allow startup without LLM API key (see SETUP_TODO.md)
 	provider, err := newLLMProvider(cfg)
 	if err != nil {
-		slog.Warn("llm provider not configured — task extraction disabled", "err", err)
+		slog.Error("llm provider", "err", err)
+		os.Exit(1)
 	}
 
 	app := &App{
@@ -91,8 +91,6 @@ func main() {
 	server.Use(requestid.New())
 
 	// Public routes (no auth required)
-	server.Get("/setup", HandleSetup)
-	server.Post("/setup", HandleSetup)
 	server.Get("/login", app.HandleLoginPage)
 
 	// Rate limit on auth endpoint: 5 attempts per 15 minutes

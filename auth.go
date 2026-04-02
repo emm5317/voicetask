@@ -21,10 +21,6 @@ const (
 
 // AuthRequired is middleware that checks for a valid session cookie.
 func (a *App) AuthRequired(c *fiber.Ctx) error {
-	// TEMPORARY: Skip auth if passphrase hash is not configured
-	if a.cfg.PassphraseHash == "" {
-		return c.Next()
-	}
 	cookie := c.Cookies(sessionCookieName)
 	if cookie == "" || cookie != a.sessionToken() {
 		// For HTMX requests, return 401 so the client can redirect
