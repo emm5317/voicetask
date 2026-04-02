@@ -81,7 +81,9 @@ func main() {
 	// Serve embedded static files (manifest.json, etc.)
 	staticSub, _ := fs.Sub(staticFS, "static")
 	server.Use("/static", filesystem.New(filesystem.Config{
-		Root: http.FS(staticSub),
+		Root:       http.FS(staticSub),
+		PathPrefix: "",
+		Browse:     false,
 	}))
 
 	// Global middleware
