@@ -23,7 +23,9 @@ func (a *App) HandleDashboard(c *fiber.Ctx) error {
 		slog.Error("list tasks", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load tasks")
 	}
-	html, err := a.renderer.RenderDashboard(tasks, a.cfg.ProjectTags)
+	data := buildDashboardData(tasks, a.cfg.ProjectTags)
+	a.populateTimeData(c.UserContext(), &data, time.Now())
+	html, err := a.renderer.RenderDashboard(data)
 	if err != nil {
 		slog.Error("render dashboard", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render page")

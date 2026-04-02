@@ -1,0 +1,205 @@
+{{define "timepanel.html"}}
+<div id="time-panel" style="position:sticky; top:20px;">
+    <!-- Day header with navigation -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:0 0 16px;">
+        <button hx-get="/time/list" hx-target="#time-panel" hx-swap="outerHTML"
+                x-data x-init="$el.setAttribute('hx-get', '/time/list?date=' + prevDay('{{.ViewDate}}'))"
+                style="width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px;"
+                >&#9664;</button>
+        <div style="text-align:center;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-dim);">{{.ViewDateLabel}}</div>
+            <div style="font-size:28px; font-weight:700; color:var(--text-bright); font-family:'JetBrains Mono',monospace; letter-spacing:-0.03em;">{{.DayTotal}}</div>
+        </div>
+        <button hx-get="/time/list" hx-target="#time-panel" hx-swap="outerHTML"
+                style="width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px;"
+                x-data x-init="$el.setAttribute('hx-get', '/time/list?date=' + nextDay('{{.ViewDate}}'))"
+                >&#9654;</button>
+    </div>
+
+    <!-- Matter buttons -->
+    <div style="display:flex; flex-direction:column; gap:4px; padding-bottom:12px;">
+        {{range .MatterTotals}}
+        <button hx-post="/time/switch/{{.Matter}}" hx-target="#time-panel" hx-swap="outerHTML"
+                style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-radius:10px; border:1px solid {{if .IsActive}}{{.Meta.Accent}}40{{else}}var(--border){{end}}; background:{{if .IsActive}}{{.Meta.Accent}}0a{{else}}var(--bg-surface){{end}}; cursor:pointer; width:100%; text-align:left; transition:all 0.15s ease; font-family:'Plus Jakarta Sans',sans-serif;">
+            {{if .IsActive}}
+            <div style="width:8px; height:8px; border-radius:50%; background:{{.Meta.Accent}}; box-shadow:0 0 8px {{.Meta.Accent}}80; animation:micPulse 1.5s ease-in-out infinite; flex-shrink:0;"></div>
+            {{else}}
+            <div style="width:8px; height:8px; border-radius:50%; background:var(--border); flex-shrink:0;"></div>
+            {{end}}
+            <span style="flex:1; font-size:13px; font-weight:600; color:{{if .IsActive}}{{.Meta.Accent}}{{else}}var(--text){{end}};">{{.Meta.Label}}</span>
+            <span style="font-size:12px; font-weight:500; color:{{if .IsActive}}{{.Meta.Accent}}{{else}}var(--text-dim){{end}}; font-family:'JetBrains Mono',monospace;">{{.Formatted}}</span>
+        </button>
+        {{end}}
+
+        <!-- Resume last button -->
+        <button hx-post="/time/resume" hx-target="#time-panel" hx-swap="outerHTML"
+                style="display:flex; align-items:center; justify-content:center; gap:6px; padding:8px; border-radius:8px; border:1px dashed var(--border); background:transparent; cursor:pointer; color:var(--text-muted); font-size:11px; font-weight:500; font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.15s;">
+            &#8635; Resume last
+        </button>
+    </div>
+
+    <!-- Active timer display -->
+    {{if .Timer.Active}}
+    <div style="padding:14px 16px; border-radius:12px; background:{{.Timer.Meta.Accent}}08; border:1px solid {{.Timer.Meta.Accent}}30; margin-bottom:12px;"
+         x-data="timerDisplay('{{isoTime .Timer.StartTime}}', '{{.Timer.Meta.Label}}')" x-init="init()">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div style="width:6px; height:6px; border-radius:50%; background:{{.Timer.Meta.Accent}}; animation:micPulse 1.5s ease-in-out infinite;"></div>
+                <span style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:{{.Timer.Meta.Accent}};">{{.Timer.Meta.Label}}</span>
+            </div>
+            <span x-text="elapsed" style="font-size:24px; font-weight:500; color:var(--text-bright); font-family:'JetBrains Mono',monospace; letter-spacing:-0.02em;"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <!-- Voice note button for active timer -->
+            <div x-data="timeVoiceNote('{{.Timer.EntryID}}')" style="flex:1; display:flex; gap:8px;">
+                <input type="text" x-model="transcript" placeholder="Add a note…"
+                       @keydown.enter.prevent="submitNote()"
+                       style="flex:1; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                <button x-show="speechSupported" @click="toggleListening()"
+                        :style="listening ? 'background:var(--error);' : 'background:var(--accent);'"
+                        style="width:34px; height:34px; border-radius:8px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.2s;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>
+                    </svg>
+                </button>
+            </div>
+            <!-- Stop button -->
+            <button hx-post="/time/stop" hx-target="#time-panel" hx-swap="outerHTML"
+                    style="width:34px; height:34px; border-radius:8px; border:none; background:var(--error); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="none">
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Entries header with add manual + weekly summary links -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0 6px;">
+        <span style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted);">Entries</span>
+        <div style="display:flex; gap:6px;">
+            <button x-data="{ showManual: false }" @click="showManual = !showManual; $dispatch('toggle-manual')"
+                    style="font-size:11px; color:var(--text-dim); background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;">
+                + Add
+            </button>
+            <button hx-get="/time/weekly" hx-target="#time-panel" hx-swap="outerHTML"
+                    style="font-size:11px; color:var(--text-dim); background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;">
+                Weekly
+            </button>
+            <a href="/time/export/csv?from={{.ViewDate}}&to={{.ViewDate}}"
+               style="font-size:11px; color:var(--text-dim); background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 10px; cursor:pointer; text-decoration:none; font-family:'Plus Jakarta Sans',sans-serif; display:flex; align-items:center;">
+                CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Manual entry form (hidden by default) -->
+    <div x-data="{ show: false }" @toggle-manual.window="show = !show" x-show="show" x-cloak
+         style="padding:12px; border-radius:10px; background:var(--bg-surface); border:1px solid var(--border); margin-bottom:10px;">
+        <form hx-post="/time/manual" hx-target="#time-panel" hx-swap="outerHTML"
+              style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; gap:8px;">
+                <select name="matter" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                    {{range .ProjectTags}}
+                    <option value="{{.}}">{{projectLabel .}}</option>
+                    {{end}}
+                </select>
+                <input type="date" name="date" value="{{.ViewDate}}"
+                       style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+            </div>
+            <div style="display:flex; gap:8px;">
+                <input type="time" name="start_time" required placeholder="Start"
+                       style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                <input type="time" name="end_time" required placeholder="End"
+                       style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+            </div>
+            <input type="text" name="description" placeholder="Description (optional)"
+                   style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button type="submit" style="padding:8px 16px; border-radius:8px; border:none; background:var(--accent); color:var(--bg); font-size:12px; font-weight:600; cursor:pointer;">Save</button>
+                <button type="button" @click="show = false" style="padding:8px 12px; border-radius:8px; border:none; background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer;">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Entry list -->
+    <div style="display:flex; flex-direction:column; gap:2px; max-height:400px; overflow-y:auto;">
+        {{if eq (len .RecentEntries) 0}}
+        <div style="text-align:center; padding:32px 16px;">
+            <p style="font-size:13px; color:var(--text-muted); font-style:italic;">No time entries for this day</p>
+        </div>
+        {{else}}
+        {{range .RecentEntries}}
+        <div x-data="{ editing: false, confirmDelete: false }" class="task-row"
+             style="padding:10px 12px; border-radius:8px;">
+            <template x-if="!editing">
+                <div style="display:flex; flex-direction:column; gap:4px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:3px; height:12px; border-radius:2px; background:{{projectAccent .Matter}}; opacity:0.7;"></div>
+                        <span style="font-size:12px; font-weight:600; color:{{projectAccent .Matter}}; flex:1;">{{projectLabel .Matter}}</span>
+                        <span style="font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">
+                            {{fmtTimeOnly .StartTime}}{{if .EndTime}} – {{fmtTimeOnly .EndTime}}{{else}} – now{{end}}
+                        </span>
+                        <span style="font-size:12px; font-weight:600; color:var(--text); font-family:'JetBrains Mono',monospace;">
+                            {{if .EndTime}}{{fmtBillable .BillableHours}}{{else}}…{{end}}
+                        </span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; padding-left:11px;">
+                        {{if .Description}}
+                        <span style="font-size:11.5px; color:var(--text-dim); flex:1; font-style:italic;">"{{.Description}}"</span>
+                        {{else}}
+                        <span style="font-size:11px; color:var(--text-faint); flex:1;">(no description)</span>
+                        {{end}}
+                        <!-- Voice note for this entry -->
+                        {{if not .Description}}
+                        <div x-data="timeVoiceNote('{{.ID}}')" style="display:flex; gap:4px;">
+                            <button x-show="speechSupported" @click="toggleListening()"
+                                    :style="listening ? 'background:var(--error);' : 'background:var(--bg-surface); border:1px solid var(--border);'"
+                                    style="width:28px; height:28px; border-radius:6px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" :stroke="listening ? 'white' : 'var(--text-dim)'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>
+                                </svg>
+                            </button>
+                        </div>
+                        {{end}}
+                        <!-- Edit button -->
+                        <button @click="editing = true" class="btn-icon" style="width:28px; height:28px; font-size:12px;" title="Edit">&#9998;</button>
+                        <!-- Delete -->
+                        <div style="position:relative;">
+                            <button x-show="!confirmDelete" @click="confirmDelete = true" class="btn-icon" style="width:28px; height:28px; font-size:14px;" title="Delete">&times;</button>
+                            <div x-show="confirmDelete" x-cloak style="display:flex; gap:4px;">
+                                <button hx-delete="/time/{{.ID}}" hx-target="#time-panel" hx-swap="outerHTML"
+                                        style="font-size:10px; font-weight:600; color:var(--error); background:rgba(232,101,92,0.08); border:none; border-radius:6px; padding:5px 8px; cursor:pointer;">Del</button>
+                                <button @click="confirmDelete = false" style="font-size:12px; color:var(--text-muted); background:transparent; border:none; cursor:pointer;">&times;</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <!-- Edit form for entry -->
+            <template x-if="editing">
+                <form hx-patch="/time/{{.ID}}" hx-target="#time-panel" hx-swap="outerHTML"
+                      @htmx:after-request="editing = false"
+                      style="display:flex; flex-direction:column; gap:6px;">
+                    <input type="hidden" name="action" value="edit">
+                    <input type="hidden" name="date" value="{{fmtDateInput .StartTime}}">
+                    <div style="display:flex; gap:6px;">
+                        <input type="time" name="start_time" value="{{.StartTime.Local.Format "15:04"}}" required
+                               style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                        <input type="time" name="end_time" value="{{if .EndTime}}{{.EndTime.Local.Format "15:04"}}{{end}}" required
+                               style="flex:1; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                    </div>
+                    <input type="text" name="description" value="{{.Description}}" placeholder="Description"
+                           style="padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                    <div style="display:flex; gap:6px; justify-content:flex-end;">
+                        <button type="submit" style="padding:6px 14px; border-radius:7px; border:none; background:var(--accent); color:var(--bg); font-size:11px; font-weight:600; cursor:pointer;">Save</button>
+                        <button type="button" @click="editing = false" style="padding:6px 10px; border-radius:7px; border:none; background:transparent; color:var(--text-muted); font-size:11px; cursor:pointer;">Cancel</button>
+                    </div>
+                </form>
+            </template>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+</div>
+{{end}}

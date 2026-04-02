@@ -9,7 +9,10 @@ import (
 )
 
 //go:embed db/migrations/001_create_tasks.sql
-var migrationSQL string
+var migration001 string
+
+//go:embed db/migrations/002_create_time_entries.sql
+var migration002 string
 
 // NewPool creates a new pgx connection pool.
 func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
@@ -32,10 +35,13 @@ func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 	return pool, nil
 }
 
-// RunMigrations executes the embedded SQL migration.
+// RunMigrations executes all embedded SQL migrations in order.
 func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
-	if _, err := pool.Exec(ctx, migrationSQL); err != nil {
-		return fmt.Errorf("exec migration: %w", err)
+	migrations := []string{migration001, migration002}
+	for i, sql := range migrations {
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("exec migration %03d: %w", i+1, err)
+		}
 	}
 	return nil
 }
