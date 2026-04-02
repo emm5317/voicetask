@@ -1,15 +1,34 @@
-.PHONY: build build-linux run dev test lint deploy hash migrate
+.PHONY: build build-linux run dev test lint deploy hash migrate templ css css-watch
 
-build:
+TAILWIND_BIN := ./bin/tailwindcss
+
+$(TAILWIND_BIN):
+	@mkdir -p bin
+	curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+	chmod +x tailwindcss-linux-x64
+	mv tailwindcss-linux-x64 $(TAILWIND_BIN)
+
+templ:
+	templ generate
+
+css: $(TAILWIND_BIN)
+	$(TAILWIND_BIN) -i static/input.css -o static/styles.css --minify
+
+css-watch: $(TAILWIND_BIN)
+	$(TAILWIND_BIN) -i static/input.css -o static/styles.css --watch
+
+build: templ css
 	go build -o voicetask .
 
-build-linux:
+build-linux: templ css
 	GOOS=linux GOARCH=amd64 go build -o voicetask .
 
 run:
 	go run .
 
 dev:
+	templ generate --watch &
+	$(MAKE) css-watch &
 	air
 
 test:

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
@@ -58,11 +57,8 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("DATABASE_URL is required")
 	}
 
-	// TEMPORARY: Allow startup without passphrase hash and API key
-	// so the /setup route can be used to generate the hash.
-	// See SETUP_TODO.md for instructions on restoring these checks.
 	if cfg.PassphraseHash == "" {
-		slog.Warn("APP_PASSPHRASE_HASH is not set — auth is disabled, /setup route available")
+		return nil, fmt.Errorf("APP_PASSPHRASE_HASH is required")
 	}
 
 	return cfg, nil

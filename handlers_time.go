@@ -11,6 +11,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/emm5317/voicetask/db"
+	"github.com/emm5317/voicetask/templates/components"
+	"github.com/emm5317/voicetask/templates/model"
 )
 
 // populateTimeData fills DashboardData with time tracking info for the given date.
@@ -348,13 +350,7 @@ func (a *App) HandleWeeklySummary(c *fiber.Ctx) error {
 	}
 
 	// Build display rows
-	type gridRow struct {
-		Matter string
-		Meta   ProjectMeta
-		Days   [5]string
-		Total  string
-	}
-	var displayRows []gridRow
+	var displayRows []model.WeeklySummaryRow
 	for _, m := range matters {
 		key := strings.ToLower(m)
 		dh := grid[key]
@@ -368,11 +364,10 @@ func (a *App) HandleWeeklySummary(c *fiber.Ctx) error {
 			}
 			total += dh[i]
 		}
-		displayRows = append(displayRows, gridRow{
-			Matter: m,
-			Meta:   getProjectMeta(m),
-			Days:   days,
-			Total:  fmt.Sprintf("%.1f", total),
+		displayRows = append(displayRows, model.WeeklySummaryRow{
+			Meta:  getProjectMeta(m),
+			Days:  days[:],
+			Total: fmt.Sprintf("%.1f", total),
 		})
 	}
 
@@ -393,23 +388,18 @@ func (a *App) HandleWeeklySummary(c *fiber.Ctx) error {
 		dayLabels[i] = weekStart.AddDate(0, 0, i).Format("Mon 1/2")
 	}
 
-	templateData := map[string]interface{}{
-		"WeekLabel":  fmt.Sprintf("Week of %s – %s", weekStart.Format("Jan 2"), weekStart.AddDate(0, 0, 4).Format("Jan 2")),
-		"WeekStart":  weekStart.Format("2006-01-02"),
-		"PrevWeek":   weekStart.AddDate(0, 0, -7).Format("2006-01-02"),
-		"NextWeek":   weekStart.AddDate(0, 0, 7).Format("2006-01-02"),
-		"DayLabels":  dayLabels,
-		"Rows":       displayRows,
-		"TotalDays":  totalDays,
-		"GrandTotal": fmt.Sprintf("%.1f", grandTotal),
+	templateData := model.WeeklySummaryData{
+		WeekLabel:  fmt.Sprintf("Week of %s – %s", weekStart.Format("Jan 2"), weekStart.AddDate(0, 0, 4).Format("Jan 2")),
+		PrevWeek:   weekStart.AddDate(0, 0, -7).Format("2006-01-02"),
+		NextWeek:   weekStart.AddDate(0, 0, 7).Format("2006-01-02"),
+		DayLabels:  dayLabels[:],
+		Rows:       displayRows,
+		TotalDays:  totalDays[:],
+		GrandTotal: fmt.Sprintf("%.1f", grandTotal),
 	}
 
-	html, err := a.renderer.RenderWeeklySummary(templateData)
-	if err != nil {
-		slog.Error("render weekly summary", "err", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render")
-	}
-	return c.Type("html").SendString(html)
+	c.Set("Content-Type", "text/html")
+	return components.WeeklySummary(templateData).Render(c.UserContext(), c.Response().BodyWriter())
 }
 
 // HandleTimeExportCSV exports time entries as CSV.
@@ -506,12 +496,8 @@ func (a *App) renderTimePanel(c *fiber.Ctx) error {
 	data := DashboardData{ProjectTags: a.cfg.ProjectTags}
 	a.populateTimeData(c.UserContext(), &data, viewDate)
 
-	html, err := a.renderer.RenderTimePanel(data)
-	if err != nil {
-		slog.Error("render time panel", "err", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render time panel")
-	}
-	return c.Type("html").SendString(html)
+	c.Set("Content-Type", "text/html")
+	return components.TimePanel(data).Render(c.UserContext(), c.Response().BodyWriter())
 }
 
 func buildTimeReportHTML(sums []db.SumDurationByMatterRow, entries []db.TimeEntry, from, to string) string {

@@ -1,0 +1,283 @@
+package components
+
+import (
+	"github.com/emm5317/voicetask/db"
+	"github.com/emm5317/voicetask/templates/model"
+)
+
+templ TimePanel(data model.DashboardData) {
+	<div id="time-panel" class="sticky top-5">
+		<!-- Day header -->
+		<div class="flex items-center justify-between pb-4">
+			<button
+				hx-get="/time/list"
+				hx-target="#time-panel"
+				hx-swap="outerHTML"
+				x-data
+				x-init={ "$el.setAttribute('hx-get', '/time/list?date=' + prevDay('" + data.ViewDate + "'))" }
+				class="w-8 h-8 rounded-lg border border-border bg-surface text-text-dim cursor-pointer flex items-center justify-center text-sm transition-all duration-150 hover:bg-bg-hover hover:border-text-muted"
+			>&#9664;</button>
+			<div class="text-center">
+				<div class="text-[11px] font-bold tracking-[0.08em] uppercase text-text-dim">{ data.ViewDateLabel }</div>
+				<div class="text-[28px] font-bold text-text-bright font-mono tracking-tight">{ data.DayTotal }</div>
+			</div>
+			<button
+				hx-get="/time/list"
+				hx-target="#time-panel"
+				hx-swap="outerHTML"
+				x-data
+				x-init={ "$el.setAttribute('hx-get', '/time/list?date=' + nextDay('" + data.ViewDate + "'))" }
+				class="w-8 h-8 rounded-lg border border-border bg-surface text-text-dim cursor-pointer flex items-center justify-center text-sm transition-all duration-150 hover:bg-bg-hover hover:border-text-muted"
+			>&#9654;</button>
+		</div>
+		<!-- Matter buttons -->
+		<div class="flex flex-col gap-1 pb-3">
+			for _, ms := range data.MatterTotals {
+				@matterButton(ms)
+			}
+			<!-- Resume last -->
+			<button
+				hx-post="/time/resume"
+				hx-target="#time-panel"
+				hx-swap="outerHTML"
+				class="flex items-center justify-center gap-1.5 py-2 rounded-lg cursor-pointer border border-dashed border-border bg-transparent text-text-muted text-[11px] font-medium font-body transition-all duration-150 hover:border-text-muted hover:text-text-dim"
+			>
+				&#8635; Resume last
+			</button>
+		</div>
+		<!-- Active timer -->
+		if data.Timer.Active {
+			@activeTimer(data.Timer)
+		}
+		<!-- Entries header -->
+		<div class="flex items-center justify-between py-2 pb-1.5">
+			<span class="text-[11px] font-bold tracking-[0.08em] uppercase text-text-muted">Entries</span>
+			<div class="flex gap-1.5">
+				<button
+					x-data="{ showManual: false }"
+					@click="showManual = !showManual; $dispatch('toggle-manual')"
+					class="text-[11px] text-text-dim bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer font-body transition-all duration-150 hover:border-text-muted hover:text-text"
+				>
+					+ Add
+				</button>
+				<button
+					hx-get="/time/weekly"
+					hx-target="#time-panel"
+					hx-swap="outerHTML"
+					class="text-[11px] text-text-dim bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer font-body transition-all duration-150 hover:border-text-muted hover:text-text"
+				>
+					Weekly
+				</button>
+				<a
+					href={ templ.SafeURL("/time/export/csv?from=" + data.ViewDate + "&to=" + data.ViewDate) }
+					class="text-[11px] text-text-dim bg-transparent border border-border rounded-md px-2.5 py-1 cursor-pointer no-underline font-body flex items-center transition-all duration-150 hover:border-text-muted hover:text-text"
+				>
+					CSV
+				</a>
+			</div>
+		</div>
+		<!-- Manual entry form -->
+		<div x-data="{ show: false }" @toggle-manual.window="show = !show" x-show="show" x-cloak class="p-3 rounded-[10px] bg-surface border border-border mb-2.5">
+			<form hx-post="/time/manual" hx-target="#time-panel" hx-swap="outerHTML" class="flex flex-col gap-2">
+				<div class="flex gap-2">
+					<select name="matter" class="flex-1 py-2 px-2.5 rounded-lg border border-border bg-bg text-text text-xs font-body">
+						for _, tag := range data.ProjectTags {
+							<option value={ tag }>{ ProjectLabel(tag) }</option>
+						}
+					</select>
+					<input type="date" name="date" value={ data.ViewDate } class="py-2 px-2.5 rounded-lg border border-border bg-bg text-text text-xs font-body"/>
+				</div>
+				<div class="flex gap-2">
+					<input type="time" name="start_time" required placeholder="Start" class="flex-1 py-2 px-2.5 rounded-lg border border-border bg-bg text-text text-xs font-body"/>
+					<input type="time" name="end_time" required placeholder="End" class="flex-1 py-2 px-2.5 rounded-lg border border-border bg-bg text-text text-xs font-body"/>
+				</div>
+				<input type="text" name="description" placeholder="Description (optional)" class="py-2 px-3 rounded-lg border border-border bg-bg text-text text-xs font-body"/>
+				<div class="flex gap-2 justify-end">
+					<button type="submit" class="py-2 px-4 rounded-lg border-none bg-accent text-bg text-xs font-semibold cursor-pointer">Save</button>
+					<button type="button" @click="show = false" class="py-2 px-3 rounded-lg border-none bg-transparent text-text-muted text-xs cursor-pointer">Cancel</button>
+				</div>
+			</form>
+		</div>
+		<!-- Entry list -->
+		<div class="flex flex-col gap-0.5 max-h-[400px] overflow-y-auto">
+			if len(data.RecentEntries) == 0 {
+				<div class="text-center py-8 px-4">
+					<p class="text-[13px] text-text-muted italic">No time entries for this day</p>
+				</div>
+			} else {
+				for _, entry := range data.RecentEntries {
+					@timeEntryRow(entry)
+				}
+			}
+		</div>
+	</div>
+}
+
+templ matterButton(ms model.MatterSummary) {
+	<button
+		hx-post={ "/time/switch/" + ms.Matter }
+		hx-target="#time-panel"
+		hx-swap="outerHTML"
+		class="flex items-center gap-2.5 px-3.5 py-3 rounded-[10px] cursor-pointer w-full text-left transition-all duration-150 font-body"
+		if ms.IsActive {
+			style={ "border:1px solid " + ms.Meta.Accent + "40; background:" + ms.Meta.Accent + "0a" }
+		} else {
+			style="border:1px solid var(--color-border); background:var(--color-surface)"
+		}
+	>
+		if ms.IsActive {
+			<div class="w-2 h-2 rounded-full shrink-0 animate-mic-pulse" style={ "background:" + ms.Meta.Accent + "; box-shadow:0 0 8px " + ms.Meta.Accent + "80" }></div>
+		} else {
+			<div class="w-2 h-2 rounded-full shrink-0 bg-border"></div>
+		}
+		<span class="flex-1 text-[13px] font-semibold" style={ "color:" + activeOrDefault(ms.IsActive, ms.Meta.Accent, "var(--color-text)") }>
+			{ ms.Meta.Label }
+		</span>
+		<span class="text-xs font-medium font-mono" style={ "color:" + activeOrDefault(ms.IsActive, ms.Meta.Accent, "var(--color-text-dim)") }>
+			{ ms.Formatted }
+		</span>
+	</button>
+}
+
+templ activeTimer(timer model.TimerState) {
+	<div
+		class="p-3.5 px-4 rounded-xl mb-3 animate-fade-in"
+		style={ "background:" + timer.Meta.Accent + "08; border:1px solid " + timer.Meta.Accent + "30" }
+		x-data={ "timerDisplay('" + IsoTime(timer.StartTime) + "', '" + timer.Meta.Label + "')" }
+		x-init="init()"
+	>
+		<div class="flex items-center justify-between mb-2.5">
+			<div class="flex items-center gap-2">
+				<div class="w-1.5 h-1.5 rounded-full animate-mic-pulse" style={ "background:" + timer.Meta.Accent + "; box-shadow:0 0 8px " + timer.Meta.Accent + "80" }></div>
+				<span class="text-[11px] font-bold tracking-[0.08em] uppercase" style={ "color:" + timer.Meta.Accent }>{ timer.Meta.Label }</span>
+			</div>
+			<span x-text="elapsed" class="text-2xl font-medium text-text-bright font-mono tracking-tight"></span>
+		</div>
+		<div class="flex items-center gap-2">
+			<div x-data={ "timeVoiceNote('" + timer.EntryID + "')" } class="flex-1 flex gap-2">
+				<input
+					type="text"
+					x-model="transcript"
+					placeholder="Add a note…"
+					@keydown.enter.prevent="submitNote()"
+					class="flex-1 py-2 px-3 rounded-lg border border-border bg-surface text-text text-xs font-body outline-none focus:border-accent placeholder:text-text-muted"
+				/>
+				<button
+					x-show="speechSupported"
+					@click="toggleListening()"
+					x-bind:style="listening ? 'background:var(--color-error);' : 'background:var(--color-accent);'"
+					class="w-[34px] h-[34px] rounded-lg border-none cursor-pointer flex items-center justify-center shrink-0 transition-all duration-200 hover:opacity-85"
+				>
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+						<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+						<line x1="12" y1="19" x2="12" y2="22"></line>
+					</svg>
+				</button>
+			</div>
+			<button
+				hx-post="/time/stop"
+				hx-target="#time-panel"
+				hx-swap="outerHTML"
+				class="w-[34px] h-[34px] rounded-lg border-none bg-error cursor-pointer flex items-center justify-center shrink-0 transition-all duration-200 hover:opacity-85"
+			>
+				<svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="none">
+					<rect x="4" y="4" width="16" height="16" rx="2"></rect>
+				</svg>
+			</button>
+		</div>
+	</div>
+}
+
+templ timeEntryRow(entry db.TimeEntry) {
+	<div x-data="{ editing: false, confirmDelete: false }" class="task-row px-3 py-2.5 rounded-lg transition-colors duration-150 hover:bg-bg-hover">
+		<template x-if="!editing">
+			<div class="flex flex-col gap-1">
+				<div class="flex items-center gap-2">
+					<div class="w-[3px] h-3 rounded-sm opacity-70" style={ "background:" + ProjectAccent(entry.Matter) }></div>
+					<span class="text-xs font-semibold flex-1" style={ "color:" + ProjectAccent(entry.Matter) }>{ ProjectLabel(entry.Matter) }</span>
+					<span class="text-[11px] text-text-dim font-mono">
+						{ FmtTimeOnly(entry.StartTime) }
+						if entry.EndTime != nil {
+							– { FmtTimeOnly(*entry.EndTime) }
+						} else {
+							– now
+						}
+					</span>
+					<span class="text-xs font-semibold text-text font-mono">
+						if entry.EndTime != nil {
+							{ FmtBillable(entry.BillableHours) }
+						} else {
+							…
+						}
+					</span>
+				</div>
+				<div class="flex items-center gap-1.5 pl-[11px]">
+					if entry.Description != "" {
+						<span class="text-[11.5px] text-text-dim flex-1 italic">"{ entry.Description }"</span>
+					} else {
+						<span class="text-[11px] text-text-faint flex-1">(no description)</span>
+					}
+					if entry.Description == "" {
+						<div x-data={ "timeVoiceNote('" + entry.ID + "')" } class="flex gap-1">
+							<button
+								x-show="speechSupported"
+								@click="toggleListening()"
+								x-bind:style="listening ? 'background:var(--color-error);' : 'background:var(--color-surface); border:1px solid var(--color-border);'"
+								class="w-7 h-7 rounded-md border-none cursor-pointer flex items-center justify-center"
+							>
+								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" x-bind:stroke="listening ? 'white' : 'var(--color-text-dim)'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+									<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+									<line x1="12" y1="19" x2="12" y2="22"></line>
+								</svg>
+							</button>
+						</div>
+					}
+					<button @click="editing = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-xs transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Edit">&#9998;</button>
+					<div class="relative">
+						<button x-show="!confirmDelete" @click="confirmDelete = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Delete">&times;</button>
+						<div x-show="confirmDelete" x-cloak class="flex gap-1">
+							<button hx-delete={ "/time/" + entry.ID } hx-target="#time-panel" hx-swap="outerHTML" class="text-[10px] font-semibold text-error bg-error/[0.08] border-none rounded-md px-2 py-[5px] cursor-pointer">Del</button>
+							<button @click="confirmDelete = false" class="text-xs text-text-muted bg-transparent border-none cursor-pointer">&times;</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</template>
+		<!-- Edit form -->
+		<template x-if="editing">
+			<form
+				hx-patch={ "/time/" + entry.ID }
+				hx-target="#time-panel"
+				hx-swap="outerHTML"
+				@htmx:after-request="editing = false"
+				class="flex flex-col gap-1.5"
+			>
+				<input type="hidden" name="action" value="edit"/>
+				<input type="hidden" name="date" value={ FmtDateInput(entry.StartTime) }/>
+				<div class="flex gap-1.5">
+					<input type="time" name="start_time" value={ entry.StartTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+					if entry.EndTime != nil {
+						<input type="time" name="end_time" value={ entry.EndTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+					} else {
+						<input type="time" name="end_time" value="" required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+					}
+				</div>
+				<input type="text" name="description" value={ entry.Description } placeholder="Description" class="py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+				<div class="flex gap-1.5 justify-end">
+					<button type="submit" class="py-1.5 px-3.5 rounded-[7px] border-none bg-accent text-bg text-[11px] font-semibold cursor-pointer">Save</button>
+					<button type="button" @click="editing = false" class="py-1.5 px-2.5 rounded-[7px] border-none bg-transparent text-text-muted text-[11px] cursor-pointer">Cancel</button>
+				</div>
+			</form>
+		</template>
+	</div>
+}
+
+func activeOrDefault(isActive bool, activeColor, defaultColor string) string {
+	if isActive {
+		return activeColor
+	}
+	return defaultColor
+}
+

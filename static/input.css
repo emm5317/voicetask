@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  /* Dark theme (default) */
+  --color-bg: #0f0f0d;
+  --color-surface: #161614;
+  --color-bg-hover: rgba(255, 255, 255, 0.025);
+  --color-text: #c8c4be;
+  --color-text-bright: #eae7e2;
+  --color-text-dim: #5a5850;
+  --color-text-muted: #3e3c38;
+  --color-text-faint: #2e2c28;
+  --color-border: #242220;
+  --color-border-dim: #1e1d1a;
+  --color-accent: #d4915c;
+  --color-accent-dim: #a87040;
+  --color-error: #e8655c;
+  --color-high: #d4975c;
+
+  /* Fonts */
+  --font-display: 'Instrument Serif', serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* Light theme overrides via data attribute */
+[data-theme="light"] {
+  --color-bg: #f5f3f0;
+  --color-surface: #ffffff;
+  --color-bg-hover: rgba(0, 0, 0, 0.03);
+  --color-text: #2a2820;
+  --color-text-bright: #1a1810;
+  --color-text-dim: #6a6660;
+  --color-text-muted: #9a9690;
+  --color-text-faint: #c0bcb6;
+  --color-border: #e0ddd8;
+  --color-border-dim: #d0cdc8;
+  --color-accent: #b87040;
+  --color-accent-dim: #9a5c30;
+  --color-error: #dc4040;
+  --color-high: #c08040;
+}
+
+/* Animations */
+@keyframes mic-pulse {
+  0% { transform: scale(0.96); opacity: 0.5; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes wave-bar {
+  0% { height: 3px; opacity: 0.25; }
+  100% { height: 12px; opacity: 0.7; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes timer-tick {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Utility classes for animations */
+.animate-mic-pulse { animation: mic-pulse 1.5s ease-in-out infinite; }
+.animate-slide-up { animation: slide-up 0.2s ease both; }
+.animate-fade-in { animation: fade-in 0.2s ease both; }
+.animate-spin { animation: spin 0.6s linear infinite; }
+.animate-timer-tick { animation: timer-tick 1s step-end infinite; }
+.animate-wave-bar { animation: wave-bar 0.7s ease-in-out infinite alternate; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border-dim); border-radius: 3px; }
+
+/* Alpine cloak */
+[x-cloak] { display: none !important; }
+
+/* SortableJS */
+.sortable-ghost { opacity: 0.3; }

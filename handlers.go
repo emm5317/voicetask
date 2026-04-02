@@ -12,6 +12,8 @@ import (
 
 	"github.com/emm5317/voicetask/db"
 	"github.com/emm5317/voicetask/llm"
+	"github.com/emm5317/voicetask/templates"
+	"github.com/emm5317/voicetask/templates/components"
 )
 
 const maxInputLength = 2000
@@ -25,12 +27,8 @@ func (a *App) HandleDashboard(c *fiber.Ctx) error {
 	}
 	data := buildDashboardData(tasks, a.cfg.ProjectTags)
 	a.populateTimeData(c.UserContext(), &data, time.Now())
-	html, err := a.renderer.RenderDashboard(data)
-	if err != nil {
-		slog.Error("render dashboard", "err", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render page")
-	}
-	return c.Type("html").SendString(html)
+	c.Set("Content-Type", "text/html")
+	return templates.Dashboard(data).Render(c.UserContext(), c.Response().BodyWriter())
 }
 
 // HandleCreateTask processes voice/text input, extracts tasks via LLM,
@@ -199,12 +197,9 @@ func (a *App) renderTaskList(c *fiber.Ctx) error {
 		slog.Error("list tasks", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to load tasks")
 	}
-	html, err := a.renderer.RenderTaskList(tasks, a.cfg.ProjectTags)
-	if err != nil {
-		slog.Error("render task list", "err", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render tasks")
-	}
-	return c.Type("html").SendString(html)
+	data := buildDashboardData(tasks, a.cfg.ProjectTags)
+	c.Set("Content-Type", "text/html")
+	return components.TaskList(data.Groups, data.ProjectTags).Render(c.UserContext(), c.Response().BodyWriter())
 }
 
 // HandleExportCSV streams all tasks as a CSV download.

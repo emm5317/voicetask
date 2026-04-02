@@ -1,0 +1,64 @@
+package components
+
+import "github.com/emm5317/voicetask/templates/model"
+
+templ Header(timer model.TimerState) {
+	<header class="flex items-center justify-between pt-7 pb-5">
+		<!-- Wordmark -->
+		<div class="flex items-center gap-2.5">
+			<div class="flex items-center gap-[2.5px] h-[22px]">
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent opacity-50" style="height:7px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent opacity-50" style="height:13px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent opacity-50" style="height:20px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent" style="height:15px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent" style="height:10px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent" style="height:18px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent opacity-50" style="height:11px"></div>
+				<div class="w-[2.5px] rounded-[1.5px] bg-accent opacity-50" style="height:6px"></div>
+			</div>
+			<div class="flex items-baseline gap-px">
+				<span class="font-display text-2xl text-text tracking-tight">voice</span>
+				<span class="font-body text-[17px] font-bold text-accent tracking-[0.06em] uppercase">task</span>
+			</div>
+		</div>
+		<!-- Right: clock + theme toggle -->
+		<div class="flex items-center gap-3">
+			<div x-data="clock()" class="flex flex-col items-end gap-0.5">
+				<span x-text="time" class="text-[13px] font-medium text-text-dim font-mono"></span>
+				<span x-text="date" class="text-[11px] text-text-muted"></span>
+			</div>
+			<button
+				@click="toggle()"
+				class="w-9 h-9 rounded-lg border border-border bg-surface cursor-pointer flex items-center justify-center text-text-dim text-base transition-all duration-200"
+			>
+				<span x-text="theme === 'dark' ? '&#9788;' : '&#9790;'"></span>
+			</button>
+		</div>
+	</header>
+}
+
+templ StatusStrip(totalOpen int, urgentCount int, timer model.TimerState, dayTotal string, dayTotalHrs float64) {
+	<div class="flex items-center gap-4 px-1 pb-5 flex-wrap">
+		<div class="flex items-center gap-1.5">
+			<span class="text-[22px] font-bold text-text-bright font-mono tracking-tight">{ intStr(totalOpen) }</span>
+			<span class="text-xs text-text-muted">open</span>
+		</div>
+		if urgentCount > 0 {
+			<div class="flex items-center gap-[5px] px-2.5 py-[3px] rounded-lg bg-error/[0.06]">
+				<div class="w-[5px] h-[5px] rounded-full bg-error shadow-[0_0_6px_rgba(232,101,92,0.4)]"></div>
+				<span class="text-[11px] font-semibold text-error tracking-wide">{ intStr(urgentCount) } urgent</span>
+			</div>
+		}
+		if timer.Active {
+			<div class="flex items-center gap-[5px] px-2.5 py-[3px] rounded-lg ml-auto" style={ "background:" + timer.Meta.Accent + "0a" }>
+				<div class="w-[5px] h-[5px] rounded-full animate-mic-pulse" style={ "background:" + timer.Meta.Accent }></div>
+				<span class="text-[11px] font-semibold tracking-wide" style={ "color:" + timer.Meta.Accent }>{ timer.Meta.Label }</span>
+				<span class="text-[11px] text-text-dim font-mono">{ dayTotal }</span>
+			</div>
+		} else if dayTotalHrs > 0 {
+			<div class="flex items-center gap-[5px] px-2.5 py-[3px] ml-auto">
+				<span class="text-[11px] text-text-dim font-mono">{ dayTotal } today</span>
+			</div>
+		}
+	</div>
+}

@@ -178,9 +178,9 @@ func TestLoginPage_AlreadyAuthenticated(t *testing.T) {
 	}
 }
 
-func TestAuthBypass_NoHash(t *testing.T) {
+func TestAuthNoHash_RedirectsToLogin(t *testing.T) {
 	cfg := &Config{
-		PassphraseHash: "", // empty = bypass
+		PassphraseHash: "", // empty hash = no bypass, redirects to login
 		ProjectTags:    []string{"personal"},
 	}
 	app := &App{cfg: cfg, renderer: NewRenderer(), hub: NewSSEHub()}
@@ -194,7 +194,7 @@ func TestAuthBypass_NoHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request: %v", err)
 	}
-	if resp.StatusCode != 200 {
-		t.Errorf("expected 200 when passphrase hash is empty (bypass), got %d", resp.StatusCode)
+	if resp.StatusCode != 302 {
+		t.Errorf("expected 302 redirect when passphrase hash is empty, got %d", resp.StatusCode)
 	}
 }

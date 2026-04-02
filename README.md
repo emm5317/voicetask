@@ -30,7 +30,8 @@ A single rambling voice note like *"I need to draft that Campbell's motion to co
 - **Daily digest email** — Morning summary of open tasks via SMTP
 - **PWA support** — Add to home screen on Android/iOS for app-like experience
 - **CSV/JSON export** — Download all tasks for backup or analysis
-- **Single binary** — Templates, migrations, static files all embedded via `go:embed`
+- **Time tracking** — Built-in timer with matter/project switching, daily totals, weekly summary grid, manual entry, CSV export, and email reports
+- **Single binary** — Static files (CSS, JS, manifest) and migrations embedded via `go:embed`. No Node.js runtime.
 - **Passphrase auth** — bcrypt + HMAC session cookie, single-user, no registration
 - **Rate limiting** — 5 req/15min on auth, 30 req/min on protected routes
 
@@ -40,7 +41,8 @@ A single rambling voice note like *"I need to draft that Campbell's motion to co
 |-----------|--------|---------|
 | Language | Go | 1.24 |
 | Web framework | Fiber | v2.52 |
-| HTML rendering | `html/template` + `embed.FS` | stdlib |
+| HTML rendering | Templ (type-safe Go templates) | v0.3 |
+| CSS | Tailwind CSS v4 (standalone CLI) | v4 |
 | Frontend | HTMX + Alpine.js | 2.0 / 3.14 |
 | Database | PostgreSQL | 16 |
 | DB driver | pgx/v5 + pgxpool | v5.7 |
@@ -90,17 +92,24 @@ make run
 ### Development
 
 ```bash
-# Install Air for live reload
-go install github.com/air-verse/air@latest
+# Install development tools
+go install github.com/air-verse/air@latest          # live reload
+go install github.com/a-h/templ/cmd/templ@latest    # templ compiler
 
-# Run with hot reload (watches .go, .html, .json files)
+# Download Tailwind CSS standalone CLI (no Node.js needed)
+make bin/tailwindcss
+
+# Run with hot reload (watches .go, .templ, .css files)
 make dev
 
-# Run tests
-make test
+# Build pipeline: templ generate → tailwind css → go build
+make build
 
-# Run linter
-make lint
+# Individual steps
+make templ       # compile .templ files to Go code
+make css         # generate static/styles.css from Tailwind
+make test        # run all tests
+make lint        # run golangci-lint
 ```
 
 ## Configuration
@@ -135,7 +144,7 @@ Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellat
 |--------|------|-------------|
 | `GET` | `/login` | Login page |
 | `POST` | `/auth` | Authenticate (rate limited: 5/15min) |
-| `GET` | `/` | Dashboard |
+| `GET` | `/` | Dashboard (split-panel: tasks + time tracking) |
 | `POST` | `/tasks` | Create task(s) via LLM extraction |
 | `PATCH` | `/tasks/:id` | Toggle complete, edit task, or update deadline |
 | `DELETE` | `/tasks/:id` | Delete task |
@@ -145,8 +154,19 @@ Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellat
 | `GET` | `/tasks/stream` | SSE endpoint (real-time updates) |
 | `GET` | `/export/csv` | Download tasks as CSV |
 | `GET` | `/export/json` | Download tasks as JSON |
+| `POST` | `/time/switch/:matter` | Start/switch timer for a matter |
+| `POST` | `/time/stop` | Stop active timer |
+| `POST` | `/time/resume` | Resume last stopped timer |
+| `POST` | `/time/manual` | Create manual time entry |
+| `PATCH` | `/time/:id` | Edit time entry (times, description) |
+| `DELETE` | `/time/:id` | Delete time entry |
+| `GET` | `/time/list` | Time panel partial (HTMX/SSE) |
+| `GET` | `/time/entries` | Time entries for a date |
+| `GET` | `/time/weekly` | Weekly summary grid |
+| `GET` | `/time/export/csv` | Download time entries as CSV |
+| `POST` | `/time/export/email` | Send time report via email |
 
-Protected routes are rate limited at 30 requests/minute.
+Protected routes are rate limited at 60 requests/minute.
 
 ## Deployment
 
