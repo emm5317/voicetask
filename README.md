@@ -33,7 +33,7 @@ A single rambling voice note like *"I need to draft that Campbell's motion to co
 - **Time tracking** — Built-in timer with matter/project switching, daily totals, weekly summary grid, manual entry, CSV export, and email reports
 - **Single binary** — Static files (CSS, JS, manifest) and migrations embedded via `go:embed`. No Node.js runtime.
 - **Passphrase auth** — bcrypt + HMAC session cookie, single-user, no registration
-- **Rate limiting** — 5 req/15min on auth, 30 req/min on protected routes
+- **Rate limiting** — 5 req/15min on auth, 60 req/min on protected routes
 
 ## Tech Stack
 
@@ -210,19 +210,23 @@ Browser → Caddy (HTTPS) → Fiber (recover → requestid → auth → rate lim
 - **SSE hub** — In-memory `map[chan string]bool` with mutex. Non-blocking broadcast, 30s keepalive, 5s reconnect.
 - **LLM provider interface** — Swappable via env var. Claude uses Anthropic API; OpenAI/Groq/Ollama share one implementation. Conservative priority defaults — only marks urgent/high when explicitly requested.
 - **sqlc** — Type-safe generated queries with native Go types via overrides. Zero hand-written `Scan()` calls.
-- **embed.FS** — Templates, migrations, and static files baked into the binary.
+- **embed.FS** — Migrations and static files (CSS, JS, manifest) baked into the binary. Templ components compile to native Go code.
 - **Ntfy** — Optional push notifications via HTTP POST on task creation. Non-blocking goroutine.
 - **Email digest** — Optional daily summary via SMTP. Background goroutine fires at configured hour.
 
 ## Testing
 
-36 tests across 4 test files, all passing with `-race`:
+79 tests across 8 test files, all passing with `-race`:
 
 | File | Tests | Coverage |
 |------|-------|----------|
+| `templates/components/helpers_test.go` | 19 | Deadline formatting, priority colors/labels, project meta, date/time helpers |
 | `llm/provider_test.go` | 13 | JSON parsing, markdown fencing, validation, fallback |
-| `auth_test.go` | 9 | HMAC tokens, middleware, login/logout, auth bypass |
+| `render_test.go` | 11 | Dashboard data grouping, progress %, urgent counts, unconfigured tags |
+| `auth_test.go` | 9 | HMAC tokens, middleware, login/logout, session validation |
 | `handlers_test.go` | 8 | Full request cycle with mock LLM and real DB |
+| `config_test.go` | 7 | Config validation, defaults, env overrides, tag parsing |
+| `sse_test.go` | 6 | Subscribe/unsubscribe, broadcast, concurrency, full-channel skip |
 | `db_test.go` | 6 | CRUD operations against PostgreSQL |
 
 ```bash
