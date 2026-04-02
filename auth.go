@@ -9,6 +9,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/emm5317/voicetask/templates"
 )
 
 const (
@@ -93,10 +95,6 @@ func (a *App) sessionToken() string {
 }
 
 func (a *App) renderLogin(c *fiber.Ctx, errMsg string) error {
-	html, err := a.renderer.RenderLogin(errMsg)
-	if err != nil {
-		slog.Error("render login", "err", err)
-		return c.Status(fiber.StatusInternalServerError).SendString("Failed to render login page")
-	}
-	return c.Type("html").SendString(html)
+	c.Set("Content-Type", "text/html")
+	return templates.Login(errMsg).Render(c.UserContext(), c.Response().BodyWriter())
 }
