@@ -58,17 +58,26 @@ func (a *App) sendDigest() error {
 		}
 	}
 
-	if len(open) == 0 {
-		slog.Info("digest: no open tasks, skipping email")
+	// Fetch yesterday's time data
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	yesterday := today.Add(-24 * time.Hour)
+	timeSums, _ := a.queries.SumDurationByMatter(ctx, yesterday, today)
+
+	if len(open) == 0 && len(timeSums) == 0 {
+		slog.Info("digest: no open tasks or time entries, skipping email")
 		return nil
 	}
 
 	body := buildDigestHTML(open)
+
+	// Append time tracking section if there was time tracked yesterday
+	if len(timeSums) > 0 {
+		body = appendTimeDigest(body, timeSums, yesterday)
+	}
+
 	subject := fmt.Sprintf("VoiceTask — %d open tasks", len(open))
 
-	// Count overdue
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	overdue := 0
 	for _, t := range open {
 		if t.Deadline != nil && t.Deadline.Before(today) {
@@ -80,6 +89,28 @@ func (a *App) sendDigest() error {
 	}
 
 	return a.sendEmail(subject, body)
+}
+
+func appendTimeDigest(body string, sums []db.SumDurationByMatterRow, date time.Time) string {
+	// Insert before the closing </div>
+	idx := strings.LastIndex(body, "</div>")
+	if idx < 0 {
+		return body
+	}
+
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf(`<h3 style="color:#b87040;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;">Time Tracked — %s</h3>`, date.Format("Mon, Jan 2")))
+
+	var total float64
+	for _, s := range sums {
+		meta := getProjectMeta(s.Matter)
+		b.WriteString(fmt.Sprintf(`<p style="margin:4px 0;font-size:14px;"><span style="color:%s;">&#9632;</span> %s — <strong>%.1f hrs</strong> (%d entries)</p>`,
+			meta.Accent, meta.Label, s.TotalBillable, s.EntryCount))
+		total += s.TotalBillable
+	}
+	b.WriteString(fmt.Sprintf(`<p style="margin:8px 0;font-size:14px;font-weight:700;">Total: %.1f hrs</p>`, total))
+
+	return body[:idx] + b.String() + body[idx:]
 }
 
 func buildDigestHTML(tasks []db.Task) string {

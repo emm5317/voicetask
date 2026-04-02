@@ -21,3 +21,16 @@ type Task struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 	SortOrder     int32      `json:"sort_order"`
 }
+
+type TimeEntry struct {
+	ID            string     `json:"id"`
+	Matter        string     `json:"matter"`
+	Description   string     `json:"description"`
+	RawTranscript *string    `json:"raw_transcript"`
+	StartTime     time.Time  `json:"start_time"`
+	EndTime       *time.Time `json:"end_time"`
+	DurationSecs  int        `json:"duration_secs"`
+	BillableHours float64    `json:"billable_hours"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}

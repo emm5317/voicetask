@@ -32,7 +32,7 @@
 </header>
 
 <!-- Status strip -->
-<div style="display:flex; align-items:center; gap:16px; padding:0 4px 20px;">
+<div style="display:flex; align-items:center; gap:16px; padding:0 4px 20px; flex-wrap:wrap;">
     <div style="display:flex; align-items:center; gap:6px;">
         <span style="font-size:22px; font-weight:700; color:var(--text-bright); font-family:'JetBrains Mono',monospace; letter-spacing:-0.03em;">{{.TotalOpen}}</span>
         <span style="font-size:12px; color:var(--text-muted);">open</span>
@@ -41,6 +41,17 @@
     <div style="display:flex; align-items:center; gap:5px; padding:3px 10px; border-radius:8px; background:rgba(232,101,92,0.06);">
         <div style="width:5px; height:5px; border-radius:50%; background:var(--error); box-shadow:0 0 6px rgba(232,101,92,0.4);"></div>
         <span style="font-size:11px; font-weight:600; color:var(--error); letter-spacing:0.03em;">{{.UrgentCount}} urgent</span>
+    </div>
+    {{end}}
+    {{if .Timer.Active}}
+    <div style="display:flex; align-items:center; gap:5px; padding:3px 10px; border-radius:8px; background:{{.Timer.Meta.Accent}}0a; margin-left:auto;">
+        <div style="width:5px; height:5px; border-radius:50%; background:{{.Timer.Meta.Accent}}; animation:micPulse 1.5s ease-in-out infinite;"></div>
+        <span style="font-size:11px; font-weight:600; color:{{.Timer.Meta.Accent}}; letter-spacing:0.03em;">{{.Timer.Meta.Label}}</span>
+        <span style="font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">{{.DayTotal}}</span>
+    </div>
+    {{else if gt .DayTotalHrs 0.0}}
+    <div style="display:flex; align-items:center; gap:5px; padding:3px 10px; margin-left:auto;">
+        <span style="font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace;">{{.DayTotal}} today</span>
     </div>
     {{end}}
 </div>
@@ -96,31 +107,42 @@
 <!-- SSE listener -->
 <div hx-ext="sse" sse-connect="/tasks/stream" style="display:none;">
     <div hx-get="/tasks/list" hx-trigger="sse:tasks-updated" hx-target="#task-list" hx-swap="outerHTML"></div>
+    <div hx-get="/time/list" hx-trigger="sse:timer-updated" hx-target="#time-panel" hx-swap="outerHTML"></div>
 </div>
 
-<!-- Task list -->
-{{template "tasklist.html" .}}
+<!-- Split dashboard: tasks left, time right -->
+<div class="dashboard-split">
+    <!-- Left column: Task list -->
+    <div>
+        {{template "tasklist.html" .}}
 
-<!-- Clear completed -->
-{{if .HasComplete}}
-<div x-data="{ confirm: false }" style="display:flex; justify-content:center; padding:20px 0 8px;">
-    <button x-show="!confirm" @click="confirm = true"
-            style="font-size:11.5px; color:var(--text-muted); font-weight:500; background:transparent; border:1px solid var(--border-dim); border-radius:10px; padding:8px 20px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.2s;">
-        Clear completed
-    </button>
-    <div x-show="confirm" x-cloak style="display:flex; gap:8px; align-items:center; padding:4px 12px; border-radius:10px; background:var(--bg-surface);">
-        <span style="font-size:12px; color:var(--text-dim);">Clear all completed?</span>
-        <button hx-post="/tasks/clear" hx-target="#task-list" hx-swap="outerHTML" @click="confirm = false"
-                style="font-size:11.5px; color:var(--error); font-weight:600; background:rgba(232,101,92,0.08); border:none; border-radius:7px; padding:6px 14px; cursor:pointer;">
-            Confirm
-        </button>
-        <button @click="confirm = false"
-                style="font-size:11.5px; color:var(--text-muted); background:transparent; border:none; padding:6px 8px; cursor:pointer;">
-            Cancel
-        </button>
+        <!-- Clear completed -->
+        {{if .HasComplete}}
+        <div x-data="{ confirm: false }" style="display:flex; justify-content:center; padding:20px 0 8px;">
+            <button x-show="!confirm" @click="confirm = true"
+                    style="font-size:11.5px; color:var(--text-muted); font-weight:500; background:transparent; border:1px solid var(--border-dim); border-radius:10px; padding:8px 20px; cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif; transition:all 0.2s;">
+                Clear completed
+            </button>
+            <div x-show="confirm" x-cloak style="display:flex; gap:8px; align-items:center; padding:4px 12px; border-radius:10px; background:var(--bg-surface);">
+                <span style="font-size:12px; color:var(--text-dim);">Clear all completed?</span>
+                <button hx-post="/tasks/clear" hx-target="#task-list" hx-swap="outerHTML" @click="confirm = false"
+                        style="font-size:11.5px; color:var(--error); font-weight:600; background:rgba(232,101,92,0.08); border:none; border-radius:7px; padding:6px 14px; cursor:pointer;">
+                    Confirm
+                </button>
+                <button @click="confirm = false"
+                        style="font-size:11.5px; color:var(--text-muted); background:transparent; border:none; padding:6px 8px; cursor:pointer;">
+                    Cancel
+                </button>
+            </div>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Right column: Time tracking panel -->
+    <div>
+        {{template "timepanel.html" .}}
     </div>
 </div>
-{{end}}
 
 <script>
 function clock() {
@@ -231,6 +253,141 @@ function voiceCapture() {
         }
     };
 }
+
+// Date navigation helpers
+function prevDay(dateStr) {
+    var d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+}
+function nextDay(dateStr) {
+    var d = new Date(dateStr + 'T12:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+}
+
+// Timer display component — live-ticking HH:MM:SS
+function timerDisplay(startTimeISO, matterLabel) {
+    return {
+        startTime: startTimeISO ? new Date(startTimeISO) : null,
+        matterLabel: matterLabel || '',
+        elapsed: '00:00:00',
+        ticker: null,
+
+        init() {
+            if (this.startTime) this.startTicking();
+        },
+
+        startTicking() {
+            var self = this;
+            self.tick();
+            self.ticker = setInterval(function() { self.tick(); }, 1000);
+        },
+
+        tick() {
+            if (!this.startTime) { this.elapsed = '00:00:00'; return; }
+            var diff = Math.floor((Date.now() - this.startTime.getTime()) / 1000);
+            if (diff < 0) diff = 0;
+            var h = Math.floor(diff / 3600);
+            var m = Math.floor((diff % 3600) / 60);
+            var s = diff % 60;
+            this.elapsed = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+            // Update page title
+            if (this.matterLabel) {
+                document.title = this.elapsed + ' \u2014 ' + this.matterLabel + ' | VoiceTask';
+            }
+        },
+
+        destroy() {
+            if (this.ticker) { clearInterval(this.ticker); this.ticker = null; }
+            document.title = 'VoiceTask';
+        }
+    };
+}
+
+// Voice note component for time entries
+function timeVoiceNote(entryId) {
+    return {
+        entryId: entryId,
+        listening: false,
+        transcript: '',
+        recognition: null,
+        speechSupported: false,
+        silenceTimer: null,
+
+        init() {
+            var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) return;
+            this.speechSupported = true;
+
+            this.recognition = new SR();
+            this.recognition.continuous = true;
+            this.recognition.interimResults = true;
+            this.recognition.lang = 'en-US';
+
+            var self = this;
+            this.recognition.onresult = function(e) {
+                self.transcript = Array.from(e.results).map(function(r){ return r[0].transcript; }).join('');
+                self.resetSilenceTimer();
+            };
+            this.recognition.onend = function() {
+                self.clearSilenceTimer();
+                if (self.listening) {
+                    self.listening = false;
+                    if (self.transcript.trim()) self.submitNote();
+                }
+            };
+            this.recognition.onerror = function(e) {
+                if (e.error !== 'no-speech') {
+                    self.clearSilenceTimer();
+                    self.listening = false;
+                }
+            };
+        },
+
+        resetSilenceTimer() {
+            this.clearSilenceTimer();
+            var self = this;
+            this.silenceTimer = setTimeout(function() {
+                if (self.listening && self.transcript.trim()) {
+                    self.recognition.stop();
+                }
+            }, 3000);
+        },
+
+        clearSilenceTimer() {
+            if (this.silenceTimer) { clearTimeout(this.silenceTimer); this.silenceTimer = null; }
+        },
+
+        toggleListening() {
+            if (this.listening) {
+                this.clearSilenceTimer();
+                this.recognition.stop();
+            } else {
+                this.transcript = '';
+                this.listening = true;
+                this.recognition.start();
+            }
+        },
+
+        submitNote() {
+            var text = this.transcript.trim();
+            if (!text || !this.entryId) return;
+            this.transcript = '';
+            htmx.ajax('PATCH', '/time/' + this.entryId, {
+                target: '#time-panel', swap: 'outerHTML',
+                values: { action: 'description', description: text, raw_transcript: text }
+            });
+        }
+    };
+}
+
+// Re-init timer display after HTMX swaps
+document.addEventListener('htmx:afterSwap', function(e) {
+    if (e.detail.target && e.detail.target.id === 'time-panel') {
+        // Alpine auto-initializes x-data on swapped elements
+    }
+});
 
 // SortableJS init
 function initSortable() {

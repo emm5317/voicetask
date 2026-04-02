@@ -50,6 +50,25 @@ type TaskGroup struct {
 	Progress  int // percentage 0-100
 }
 
+// TimerState holds the current active timer info for template rendering.
+type TimerState struct {
+	Active    bool
+	EntryID   string
+	Matter    string
+	Meta      ProjectMeta
+	StartTime time.Time
+}
+
+// MatterSummary holds per-matter time totals for the day.
+type MatterSummary struct {
+	Matter      string
+	Meta        ProjectMeta
+	TotalSecs   int
+	BillableHrs float64
+	Formatted   string // e.g. "1.5 hrs"
+	IsActive    bool
+}
+
 // DashboardData holds all data needed to render the dashboard.
 type DashboardData struct {
 	Groups      []TaskGroup
@@ -57,6 +76,14 @@ type DashboardData struct {
 	UrgentCount int
 	HasComplete bool
 	ProjectTags []string
+	// Time tracking fields
+	Timer          TimerState
+	MatterTotals   []MatterSummary
+	DayTotalHrs    float64
+	DayTotal       string // formatted e.g. "3.5 hrs"
+	RecentEntries  []db.TimeEntry
+	ViewDate       string // YYYY-MM-DD for date navigation
+	ViewDateLabel  string // "Today", "Yesterday", or "Mon, Jan 2"
 }
 
 // Renderer holds parsed templates.
@@ -74,7 +101,26 @@ func NewRenderer() *Renderer {
 		"priorityColor":  priorityColor,
 		"priorityLabel":  priorityLabel,
 		"seq":          func(n int) []int { s := make([]int, n); for i := range s { s[i] = i }; return s },
-		"fmtDateInput": func(d *time.Time) string { if d == nil { return "" }; return d.Format("2006-01-02") },
+		"fmtDateInput": func(d interface{}) string {
+			switch v := d.(type) {
+			case *time.Time:
+				if v == nil { return "" }
+				return v.Format("2006-01-02")
+			case time.Time:
+				return v.Format("2006-01-02")
+			default:
+				return ""
+			}
+		},
+		"fmtBillable": func(h float64) string { return fmt.Sprintf("%.1f hrs", h) },
+		"fmtTimeOnly": func(t time.Time) string { return t.Local().Format("3:04 PM") },
+		"isoTime": func(t time.Time) string { return t.Format(time.RFC3339) },
+		"fmtDuration": func(secs int) string {
+			h := secs / 3600
+			m := (secs % 3600) / 60
+			if h > 0 { return fmt.Sprintf("%dh %dm", h, m) }
+			return fmt.Sprintf("%dm", m)
+		},
 	}
 
 	tmpl := template.Must(
@@ -85,8 +131,7 @@ func NewRenderer() *Renderer {
 }
 
 // RenderDashboard renders the full dashboard page.
-func (r *Renderer) RenderDashboard(tasks []db.Task, tags []string) (string, error) {
-	data := buildDashboardData(tasks, tags)
+func (r *Renderer) RenderDashboard(data DashboardData) (string, error) {
 	var buf bytes.Buffer
 	if err := r.templates.ExecuteTemplate(&buf, "layout.html", data); err != nil {
 		return "", fmt.Errorf("render dashboard: %w", err)
@@ -100,6 +145,24 @@ func (r *Renderer) RenderTaskList(tasks []db.Task, tags []string) (string, error
 	var buf bytes.Buffer
 	if err := r.templates.ExecuteTemplate(&buf, "tasklist.html", data); err != nil {
 		return "", fmt.Errorf("render task list: %w", err)
+	}
+	return buf.String(), nil
+}
+
+// RenderTimePanel renders only the time panel partial (for HTMX swaps).
+func (r *Renderer) RenderTimePanel(data DashboardData) (string, error) {
+	var buf bytes.Buffer
+	if err := r.templates.ExecuteTemplate(&buf, "timepanel.html", data); err != nil {
+		return "", fmt.Errorf("render time panel: %w", err)
+	}
+	return buf.String(), nil
+}
+
+// RenderWeeklySummary renders the weekly summary partial.
+func (r *Renderer) RenderWeeklySummary(data map[string]interface{}) (string, error) {
+	var buf bytes.Buffer
+	if err := r.templates.ExecuteTemplate(&buf, "weeklysummary.html", data); err != nil {
+		return "", fmt.Errorf("render weekly summary: %w", err)
 	}
 	return buf.String(), nil
 }

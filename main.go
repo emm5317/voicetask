@@ -109,9 +109,9 @@ func main() {
 	// SSE endpoint (auth required, but no rate limit — long-lived connection)
 	server.Get("/tasks/stream", app.AuthRequired, app.hub.HandleStream)
 
-	// Protected routes with rate limiting: 30 req/min
+	// Protected routes with rate limiting: 60 req/min (increased for timer switching)
 	protected := server.Group("/", app.AuthRequired, limiter.New(limiter.Config{
-		Max:        30,
+		Max:        60,
 		Expiration: 1 * time.Minute,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
@@ -127,6 +127,22 @@ func main() {
 	protected.Post("/tasks/clear", app.HandleClearCompleted)
 	protected.Get("/export/csv", app.HandleExportCSV)
 	protected.Get("/export/json", app.HandleExportJSON)
+
+	// Time tracking routes
+	protected.Post("/time/switch/:matter", app.HandleSwitchMatter)
+	protected.Post("/time/stop", app.HandleStopTimer)
+	protected.Post("/time/resume", app.HandleResumeLast)
+	protected.Post("/time/manual", app.HandleCreateManualEntry)
+	protected.Patch("/time/:id", app.HandleUpdateTimeEntry)
+	protected.Delete("/time/:id", app.HandleDeleteTimeEntry)
+	protected.Get("/time/list", app.HandleTimeList)
+	protected.Get("/time/entries", app.HandleTimeEntries)
+	protected.Get("/time/weekly", app.HandleWeeklySummary)
+	protected.Get("/time/export/csv", app.HandleTimeExportCSV)
+	protected.Post("/time/export/email", app.HandleTimeExportEmail)
+
+	// Crash recovery: stop any timers left running from a previous crash
+	app.crashRecovery(ctx)
 
 	app.startDigestScheduler()
 
