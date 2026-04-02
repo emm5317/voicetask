@@ -73,7 +73,8 @@ func NewRenderer() *Renderer {
 		"projectLabel":   func(tag string) string { return getProjectMeta(tag).Label },
 		"priorityColor":  priorityColor,
 		"priorityLabel":  priorityLabel,
-		"seq": func(n int) []int { s := make([]int, n); for i := range s { s[i] = i }; return s },
+		"seq":          func(n int) []int { s := make([]int, n); for i := range s { s[i] = i }; return s },
+		"fmtDateInput": func(d *time.Time) string { if d == nil { return "" }; return d.Format("2006-01-02") },
 	}
 
 	tmpl := template.Must(
@@ -225,10 +226,8 @@ func fmtDeadline(d *time.Time) *DeadlineInfo {
 		return &DeadlineInfo{Text: "Today", Color: "#d4975c", Hot: true}
 	case days == 1:
 		return &DeadlineInfo{Text: "Tomorrow", Color: "#bfa260", Hot: false}
-	case days <= 7:
-		return &DeadlineInfo{Text: d.Format("Mon"), Color: "#7a7770", Hot: false}
 	default:
-		return &DeadlineInfo{Text: d.Format("Jan 2"), Color: "#504e48", Hot: false}
+		return &DeadlineInfo{Text: d.Format("Mon, Jan 2"), Color: "#7a7770", Hot: false}
 	}
 }
 

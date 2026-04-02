@@ -109,6 +109,11 @@ func (a *App) HandleUpdateTask(c *fiber.Ctx) error {
 			ProjectTag: c.FormValue("project_tag"),
 			Priority:   c.FormValue("priority"),
 		}
+		if dl := c.FormValue("deadline"); dl != "" {
+			if d, err := time.Parse("2006-01-02", dl); err == nil {
+				params.Deadline = &d
+			}
+		}
 		if _, err := a.queries.UpdateTask(c.UserContext(), params); err != nil {
 			slog.Error("update task", "id", id, "err", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update task")

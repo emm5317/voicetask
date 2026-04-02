@@ -174,17 +174,19 @@ UPDATE tasks
 SET title = COALESCE(NULLIF($1::text, ''), title),
     project_tag = COALESCE(NULLIF($2::text, ''), project_tag),
     priority = COALESCE(NULLIF($3::text, ''), priority),
+    deadline = COALESCE($4, deadline),
     updated_at = NOW()
-WHERE id = $4
+WHERE id = $5
 RETURNING id, title, project_tag, priority, deadline, raw_transcript,
           completed, completed_at, created_at, updated_at, sort_order
 `
 
 type UpdateTaskParams struct {
-	Title      string `json:"title"`
-	ProjectTag string `json:"project_tag"`
-	Priority   string `json:"priority"`
-	ID         string `json:"id"`
+	Title      string     `json:"title"`
+	ProjectTag string     `json:"project_tag"`
+	Priority   string     `json:"priority"`
+	Deadline   *time.Time `json:"deadline"`
+	ID         string     `json:"id"`
 }
 
 func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error) {
@@ -192,6 +194,7 @@ func (q *Queries) UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, e
 		arg.Title,
 		arg.ProjectTag,
 		arg.Priority,
+		arg.Deadline,
 		arg.ID,
 	)
 	var i Task

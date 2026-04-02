@@ -40,21 +40,26 @@ func SystemPrompt(today time.Time, tags []string) string {
 Known projects: %s.
 Infer the project tag from context. Default to "personal" if unclear.
 
-Infer priority:
-- "urgent" for time-sensitive legal deadlines or explicit urgency
-- "high" for this-week items
-- "normal" for everything else
-- "low" for someday/maybe
+Priority rules (most tasks should be "normal"):
+- "urgent" ONLY when the user explicitly says "urgent", "ASAP", "immediately", or "right away"
+- "high" ONLY when the user explicitly says "important", "high priority", or "critical"
+- "normal" for all standard tasks — this is the default. Use this most of the time.
+- "low" for someday/maybe tasks, or when the user says "low priority", "when I get to it", "eventually"
 
-Parse any deadline language relative to today's date: %s
+Do NOT infer urgency from deadlines alone. A task due this week is still "normal" unless the user said it was urgent or important.
 
+Today is %s (%s). Parse any deadline language relative to today.
+If no deadline is mentioned, leave the deadline field as an empty string — do not guess.
+
+Keep titles concise and actionable. Do NOT add words the user did not say.
 If the transcript contains multiple tasks, return multiple items.
-If the transcript is a single thought, return one item with a clean, actionable title.
+If the transcript is a single thought, return one item with a clean title.
 
 Respond with this exact JSON structure:
 {"tasks":[{"title":"...","project_tag":"...","priority":"...","deadline":"2025-04-15"}]}`,
 		strings.Join(tags, ", "),
-		today.Format("2006-01-02"))
+		today.Format("2006-01-02"),
+		today.Format("Monday"))
 }
 
 // cleanJSON strips markdown code fencing from LLM responses.

@@ -118,16 +118,15 @@
                 <template x-if="editing">
                     <form hx-patch="/tasks/{{$task.ID}}" hx-target="#task-list" hx-swap="outerHTML"
                           @htmx:after-request="editing = false"
-                          style="display:flex; align-items:center; gap:8px; width:100%; flex-wrap:wrap;">
+                          style="display:flex; align-items:center; gap:6px; width:100%; flex-wrap:wrap;">
                         <input type="hidden" name="action" value="edit">
                         <input type="text" name="title" value="{{$task.Title}}"
-                               style="flex:1; min-width:150px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-bright); font-size:13px; font-family:'Plus Jakarta Sans',sans-serif;">
-                        <select name="project_tag"
-                                style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
-                            {{range $.ProjectTags}}
-                            <option value="{{.}}" {{if eq . $task.ProjectTag}}selected{{end}}>{{.}}</option>
-                            {{end}}
-                        </select>
+                               style="flex:1; min-width:140px; padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text-bright); font-size:13px; font-family:'Plus Jakarta Sans',sans-serif;">
+                        <input type="text" name="project_tag" value="{{$task.ProjectTag}}" list="tags-{{$task.ID}}"
+                               style="width:100px; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
+                        <datalist id="tags-{{$task.ID}}">
+                            {{range $.ProjectTags}}<option value="{{.}}">{{end}}
+                        </datalist>
                         <select name="priority"
                                 style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
                             <option value="urgent" {{if eq $task.Priority "urgent"}}selected{{end}}>Urgent</option>
@@ -135,6 +134,8 @@
                             <option value="normal" {{if eq $task.Priority "normal"}}selected{{end}}>Normal</option>
                             <option value="low" {{if eq $task.Priority "low"}}selected{{end}}>Low</option>
                         </select>
+                        <input type="date" name="deadline" value="{{fmtDateInput $task.Deadline}}"
+                               style="padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-surface); color:var(--text); font-size:12px; font-family:'Plus Jakarta Sans',sans-serif;">
                         <button type="submit" style="padding:8px 14px; border-radius:8px; border:none; background:var(--accent); color:var(--bg); font-size:12px; font-weight:600; cursor:pointer;">
                             Save
                         </button>

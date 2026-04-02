@@ -34,6 +34,7 @@ UPDATE tasks
 SET title = COALESCE(NULLIF(sqlc.arg(title)::text, ''), title),
     project_tag = COALESCE(NULLIF(sqlc.arg(project_tag)::text, ''), project_tag),
     priority = COALESCE(NULLIF(sqlc.arg(priority)::text, ''), priority),
+    deadline = COALESCE(sqlc.arg(deadline), deadline),
     updated_at = NOW()
 WHERE id = sqlc.arg(id)
 RETURNING id, title, project_tag, priority, deadline, raw_transcript,
