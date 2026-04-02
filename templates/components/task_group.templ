@@ -1,0 +1,66 @@
+package components
+
+import "github.com/emm5317/voicetask/templates/model"
+
+templ TaskGroup(group model.TaskGroup, projectTags []string) {
+	<div class="mb-1">
+		<!-- Section header -->
+		<div class="flex items-center gap-2.5 px-3 pt-3.5 pb-2">
+			<div class="w-[3px] h-3 rounded-sm opacity-80" style={ "background:" + group.Meta.Accent }></div>
+			<span class="text-[11.5px] font-bold tracking-[0.08em] uppercase opacity-85" style={ "color:" + group.Meta.Accent }>
+				{ group.Meta.Label }
+			</span>
+			<span class="text-[11px] text-text-muted font-medium font-mono">
+				{ intStr(group.OpenCount) }
+				if group.DoneCount > 0 {
+					<span class="text-text-faint"> / { intStr(group.Total) }</span>
+				}
+			</span>
+			<div class="flex-1"></div>
+			if group.DoneCount > 0 {
+				<div class="w-10 h-0.5 rounded-full bg-border-dim">
+					<div class="h-full rounded-full opacity-40 transition-[width] duration-500" style={ "width:" + percentStr(group.Progress) + "; background:" + group.Meta.Accent }></div>
+				</div>
+			}
+		</div>
+		<!-- Task rows -->
+		<div class="sortable-group pl-1" data-tag={ group.Tag }>
+			for _, task := range group.Tasks {
+				@TaskRow(task, group.Meta.Accent, projectTags)
+			}
+		</div>
+	</div>
+}
+
+templ TaskList(groups []model.TaskGroup, projectTags []string) {
+	<div id="task-list">
+		if len(groups) == 0 {
+			@emptyState()
+		} else {
+			for _, group := range groups {
+				@TaskGroup(group, projectTags)
+			}
+		}
+	</div>
+}
+
+templ emptyState() {
+	<div class="text-center py-[72px] px-5">
+		<div class="flex justify-center gap-[3px] mb-5 opacity-20">
+			<div class="w-[3px] rounded-sm bg-accent" style="height:8px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:14px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:22px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:28px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:20px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:11px"></div>
+			<div class="w-[3px] rounded-sm bg-accent" style="height:7px"></div>
+		</div>
+		<p class="text-base text-text-muted font-display italic leading-normal">
+			Tap the mic or type to capture a task
+		</p>
+		<p class="text-xs text-text-faint mt-2">
+			Voice input is extracted into structured, tagged tasks automatically
+		</p>
+	</div>
+}
+

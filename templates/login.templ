@@ -1,0 +1,44 @@
+package templates
+
+templ Login(errMsg string) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>VoiceTask — Sign In</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com"/>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+		<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+		<link rel="stylesheet" href="/static/styles.css"/>
+		<meta name="theme-color" content="#0f0f0d"/>
+	</head>
+	<body class="bg-bg font-body antialiased flex items-center justify-center min-h-dvh">
+		<div class="bg-surface p-10 rounded-2xl w-full max-w-[340px] border border-border">
+			<div class="flex items-baseline gap-px justify-center mb-8">
+				<span class="font-display text-[28px] text-text">voice</span>
+				<span class="font-body text-[19px] font-bold text-accent tracking-[0.06em] uppercase">task</span>
+			</div>
+			if errMsg != "" {
+				<div class="text-error text-[13px] mb-4 text-center font-medium">{ errMsg }</div>
+			}
+			<form method="POST" action="/auth">
+				<input
+					type="password"
+					name="passphrase"
+					placeholder="Passphrase"
+					autofocus
+					required
+					class="w-full py-3.5 px-4 border border-border rounded-xl bg-bg text-text-bright text-[15px] font-body mb-4 outline-none focus:border-accent/40 placeholder:text-text-muted"
+				/>
+				<button
+					type="submit"
+					class="w-full py-3.5 bg-gradient-to-br from-accent-dim to-accent text-bg border-none rounded-xl text-[15px] font-semibold cursor-pointer font-body transition-opacity duration-200 hover:opacity-90"
+				>
+					Sign In
+				</button>
+			</form>
+		</div>
+	</body>
+	</html>
+}

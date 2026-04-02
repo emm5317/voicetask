@@ -1,0 +1,38 @@
+package templates
+
+templ Layout(content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+		<title>VoiceTask</title>
+		<link rel="manifest" href="/static/manifest.json"/>
+		<meta name="theme-color" content="#0f0f0d"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com"/>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+		<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+		<link rel="stylesheet" href="/static/styles.css"/>
+		<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+		<script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.14.8/dist/cdn.min.js"></script>
+		<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+		<script src="/static/app.js"></script>
+	</head>
+	<body x-data="themeToggle()" data-theme="dark" x-bind:data-theme="theme" class="bg-bg text-text font-body antialiased min-h-dvh transition-colors duration-300">
+		<!-- Top accent line -->
+		<div class="fixed top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent opacity-30 z-10"></div>
+		<!-- Error toast -->
+		<div id="error-toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] hidden">
+			<div class="bg-error/10 border border-error/20 text-error px-5 py-2.5 rounded-[10px] text-[13px] font-medium backdrop-blur-sm">
+				Something went wrong. Please try again.
+			</div>
+		</div>
+		<!-- Main content -->
+		<div class="max-w-[620px] mx-auto px-6 pb-24 lg:max-w-[1200px]">
+			@content
+		</div>
+	</body>
+	</html>
+}
