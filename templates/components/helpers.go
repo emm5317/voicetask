@@ -110,6 +110,13 @@ func IsoTime(t time.Time) string {
 	return t.Format(time.RFC3339)
 }
 
+// jsEscSQ escapes single quotes and backslashes for safe embedding in JS single-quoted strings.
+func jsEscSQ(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `'`, `\'`)
+	return s
+}
+
 func intStr(n int) string {
 	return strconv.Itoa(n)
 }

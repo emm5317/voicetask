@@ -143,7 +143,7 @@ templ activeTimer(timer model.TimerState) {
 	<div
 		class="p-3.5 px-4 rounded-xl mb-3 animate-fade-in"
 		style={ "background:" + timer.Meta.Accent + "08; border:1px solid " + timer.Meta.Accent + "30" }
-		x-data={ "timerDisplay('" + IsoTime(timer.StartTime) + "', '" + timer.Meta.Label + "')" }
+		x-data={ "timerDisplay('" + IsoTime(timer.StartTime) + "', '" + jsEscSQ(timer.Meta.Label) + "')" }
 		x-init="init()"
 	>
 		<div class="flex items-center justify-between mb-2.5">
