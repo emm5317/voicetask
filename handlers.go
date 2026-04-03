@@ -118,6 +118,7 @@ func (a *App) HandleUpdateTask(c *fiber.Ctx) error {
 				params.Deadline = &d
 			}
 		}
+		// deadline stays nil when empty → clears it in DB
 		if _, err := a.queries.UpdateTask(c.UserContext(), params); err != nil {
 			slog.Error("update task", "id", id, "err", err)
 			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update task")

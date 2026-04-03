@@ -114,7 +114,7 @@ templ TaskRow(task db.Task, accent string, projectTags []string) {
 				hx-patch={ "/tasks/" + task.ID }
 				hx-target="#task-list"
 				hx-swap="outerHTML"
-				@htmx:after-request="editing = false"
+				@htmx:afterRequest="editing = false"
 				class="flex items-center gap-1.5 w-full flex-wrap"
 			>
 				<input type="hidden" name="action" value="edit"/>

@@ -24,6 +24,7 @@ type Config struct {
 	// Ntfy push notifications
 	NtfyURL   string
 	NtfyTopic string
+	SecureCookies bool
 	// Email digest
 	SMTPHost     string
 	SMTPPort     string
@@ -43,6 +44,8 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	secureCookies := envOrDefault("APP_SECURE_COOKIES", "true")
+
 	cfg := &Config{
 		Port:           envOrDefault("APP_PORT", "8090"),
 		PassphraseHash: os.Getenv("APP_PASSPHRASE_HASH"),
@@ -55,6 +58,7 @@ func LoadConfig() (*Config, error) {
 		GroqKey:        os.Getenv("GROQ_API_KEY"),
 		OllamaURL:      envOrDefault("OLLAMA_URL", "http://localhost:11434"),
 		ProjectTags:    parseTags(envOrDefault("PROJECT_TAGS", "personal")),
+		SecureCookies:  secureCookies == "true",
 		NtfyURL:        os.Getenv("NTFY_URL"),
 		NtfyTopic:      os.Getenv("NTFY_TOPIC"),
 		SMTPHost:        os.Getenv("SMTP_HOST"),

@@ -174,7 +174,7 @@ UPDATE tasks
 SET title = COALESCE(NULLIF($1::text, ''), title),
     project_tag = COALESCE(NULLIF($2::text, ''), project_tag),
     priority = COALESCE(NULLIF($3::text, ''), priority),
-    deadline = COALESCE($4, deadline),
+    deadline = $4,
     updated_at = NOW()
 WHERE id = $5
 RETURNING id, title, project_tag, priority, deadline, raw_transcript,

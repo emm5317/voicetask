@@ -143,11 +143,26 @@ func (a *App) HandleSwitchMatter(c *fiber.Ctx) error {
 		return a.renderTimePanel(c)
 	}
 
-	// Stop all running timers, start new one
+	// Stop all running timers
 	if _, err := a.queries.StopAllTimers(ctx); err != nil {
 		slog.Error("stop all timers", "err", err)
 		return c.Status(fiber.StatusInternalServerError).SendString("Failed to stop timers")
 	}
+
+	// If the last stopped entry is for this matter, resume it instead of starting fresh
+	last, lastErr := a.queries.GetLastStoppedEntryByMatter(ctx, matter)
+	if lastErr == nil {
+		entry, err := a.queries.ResumeTimer(ctx, last.ID)
+		if err != nil {
+			slog.Error("resume timer", "err", err, "matter", matter)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to resume timer")
+		}
+		slog.Info("timer resumed (toggle)", "id", entry.ID, "matter", matter)
+		a.hub.Broadcast("timer-updated", "reload")
+		return a.renderTimePanel(c)
+	}
+
+	// No previous entry for this matter — start new
 	entry, err := a.queries.StartTimer(ctx, db.StartTimerParams{Matter: matter})
 	if err != nil {
 		slog.Error("start timer", "err", err, "matter", matter)

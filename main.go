@@ -128,7 +128,7 @@ func main() {
 		CookieName:     "csrf_",
 		CookieHTTPOnly: false,
 		CookieSameSite: "Strict",
-		CookieSecure:   true,
+		CookieSecure:   app.cfg.SecureCookies,
 		Expiration:     12 * time.Hour,
 		KeyGenerator:   utils.UUIDv4,
 	})

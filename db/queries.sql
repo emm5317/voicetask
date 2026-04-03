@@ -34,7 +34,7 @@ UPDATE tasks
 SET title = COALESCE(NULLIF(sqlc.arg(title)::text, ''), title),
     project_tag = COALESCE(NULLIF(sqlc.arg(project_tag)::text, ''), project_tag),
     priority = COALESCE(NULLIF(sqlc.arg(priority)::text, ''), priority),
-    deadline = COALESCE(sqlc.arg(deadline), deadline),
+    deadline = sqlc.arg(deadline),
     updated_at = NOW()
 WHERE id = sqlc.arg(id)
 RETURNING id, title, project_tag, priority, deadline, raw_transcript,
@@ -86,6 +86,25 @@ SELECT id, matter, description, raw_transcript, start_time, end_time,
        duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at
 FROM time_entries
 WHERE end_time IS NULL
+LIMIT 1;
+
+-- name: ResumeTimer :one
+UPDATE time_entries
+SET start_time = NOW() - (duration_secs || ' seconds')::INTERVAL,
+    end_time = NULL,
+    duration_secs = 0,
+    billable_hours = 0,
+    updated_at = NOW()
+WHERE id = $1 AND end_time IS NOT NULL
+RETURNING id, matter, description, raw_transcript, start_time, end_time,
+          duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at;
+
+-- name: GetLastStoppedEntryByMatter :one
+SELECT id, matter, description, raw_transcript, start_time, end_time,
+       duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at
+FROM time_entries
+WHERE end_time IS NOT NULL AND LOWER(matter) = LOWER($1)
+ORDER BY end_time DESC
 LIMIT 1;
 
 -- name: GetLastStoppedEntry :one

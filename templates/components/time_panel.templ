@@ -251,7 +251,7 @@ templ timeEntryRow(entry db.TimeEntry) {
 				hx-patch={ "/time/" + entry.ID }
 				hx-target="#time-panel"
 				hx-swap="outerHTML"
-				@htmx:after-request="editing = false"
+				@htmx:afterRequest="editing = false"
 				class="flex flex-col gap-1.5"
 			>
 				<input type="hidden" name="action" value="edit"/>
