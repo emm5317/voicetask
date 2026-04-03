@@ -1,5 +1,13 @@
 # VoiceTask
 
+![Go](https://img.shields.io/badge/Go-1.24-00ADD8?logo=go&logoColor=white)
+![Fiber](https://img.shields.io/badge/Fiber-v2.52-00ACD7?logo=go&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?logo=tailwindcss&logoColor=white)
+![HTMX](https://img.shields.io/badge/HTMX-2.0-3366CC)
+![Alpine.js](https://img.shields.io/badge/Alpine.js-3.14-8BC0D0?logo=alpine.js&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 A self-hosted, voice-to-task capture web app. Speak or type on any device — an LLM extracts structured, tagged tasks with priorities and deadlines. Tasks sync across all connected devices in real time via Server-Sent Events.
 
 ## How It Works
@@ -11,47 +19,41 @@ A self-hosted, voice-to-task capture web app. Speak or type on any device — an
 5. Tasks are stored in PostgreSQL and broadcast via SSE
 6. All connected devices update instantly
 
-A single rambling voice note like *"I need to draft that Campbell's motion to compel by Thursday and also follow up with Kayla about the demo"* becomes two clean, tagged, prioritized task items.
+A single rambling voice note like *"I need to draft that motion to compel by Thursday and also follow up with Kayla about the demo"* becomes two clean, tagged, prioritized task items.
 
 ## Features
 
-- **Voice capture** — Web Speech API with continuous listening, 3s silence auto-stop, real-time transcript preview
-- **LLM extraction** — Automatic tagging, prioritization, and deadline parsing (conservative defaults — only marks urgent/high when you explicitly say so)
-- **Real-time sync** — SSE broadcasts to all connected devices with 5s auto-reconnect
-- **Multi-provider LLM** — Claude, OpenAI, Groq, or Ollama (switch with one env var)
-- **Dark/light theme** — Toggle in header, persisted to localStorage. Dark theme optimized for always-on tablet display
-- **Inline task editing** — Double-click or tap edit to change title, project tag, priority, and deadline with date picker
-- **Project grouping** — Tasks grouped by configurable tags with color coding and progress bars
-- **Custom tags** — Type any tag in the edit form (autocomplete suggests existing tags)
-- **Drag-and-drop reorder** — SortableJS within project groups
-- **Priority badges** — Urgent, high, normal, low with color-coded indicators
-- **Deadline display** — Overdue count, today, tomorrow, or full date (e.g., "Sat, Apr 5")
-- **Push notifications** — Ntfy integration for mobile alerts when tasks are created
-- **Daily digest email** — Morning summary of open tasks via SMTP
-- **PWA support** — Add to home screen on Android/iOS for app-like experience
-- **CSV/JSON export** — Download all tasks for backup or analysis
-- **Time tracking** — Built-in timer with matter/project switching, daily totals, weekly summary grid, manual entry, CSV export, and email reports
-- **Single binary** — Static files (CSS, JS, manifest) and migrations embedded via `go:embed`. No Node.js runtime.
-- **Passphrase auth** — bcrypt + HMAC session cookie, single-user, no registration
-- **Rate limiting** — 5 req/15min on auth, 60 req/min on protected routes
+**Task Capture**
+- Voice capture via Web Speech API — continuous listening, 3s silence auto-stop, real-time transcript preview
+- LLM extraction — automatic tagging, prioritization, and deadline parsing (conservative defaults)
+- Multi-provider LLM — Claude, OpenAI, Groq, or Ollama (switch with one env var)
+- Inline editing — change title, project tag, priority, and deadline with date picker
+- Drag-and-drop reorder within project groups (SortableJS)
 
-## Tech Stack
+**Time Tracking**
+- Built-in timer with matter/project switching
+- Decimal time extraction from voice notes (e.g., "call with Bob .2" sets 0.2h)
+- Daily totals, weekly summary grid, manual entry
+- CSV export and email reports via SMTP
 
-| Component | Choice | Version |
-|-----------|--------|---------|
-| Language | Go | 1.24 |
-| Web framework | Fiber | v2.52 |
-| HTML rendering | Templ (type-safe Go templates) | v0.3 |
-| CSS | Tailwind CSS v4 (standalone CLI) | v4 |
-| Frontend | HTMX + Alpine.js | 2.0 / 3.14 |
-| Database | PostgreSQL | 16 |
-| DB driver | pgx/v5 + pgxpool | v5.7 |
-| Query generation | sqlc | v1.28 |
-| LLM (default) | Claude Sonnet | Anthropic API |
-| Reverse proxy | Caddy | v2 |
-| Voice capture | Web Speech API | browser-native |
-| Logging | `log/slog` | stdlib |
-| CI | GitHub Actions | lint + test + build |
+**Organization & Sync**
+- Real-time sync via SSE with 5s auto-reconnect
+- Project grouping with color coding and progress bars
+- Custom tags with autocomplete
+- Priority badges (urgent, high, normal, low) and deadline display
+- CSV/JSON export for backup or analysis
+
+**Notifications**
+- Push notifications via Ntfy integration
+- Daily digest email — morning summary of open tasks via SMTP
+
+**Infrastructure**
+- Single binary — static files, migrations, and CSS embedded via `go:embed`
+- Passphrase auth — bcrypt + HMAC session cookie with CSRF protection
+- Rate limiting — 5 req/15min on auth, 60 req/min on protected routes
+- Health endpoint (`/health`) with DB connectivity check
+- Dark/light theme persisted to localStorage
+- PWA support — add to home screen on Android/iOS
 
 ## Quick Start
 
@@ -102,7 +104,7 @@ make bin/tailwindcss
 # Run with hot reload (watches .go, .templ, .css files)
 make dev
 
-# Build pipeline: templ generate → tailwind css → go build
+# Build pipeline: templ generate -> tailwind css -> go build
 make build
 
 # Individual steps
@@ -120,13 +122,15 @@ All configuration is via environment variables (or `.env` file):
 |----------|----------|---------|-------------|
 | `APP_PORT` | No | `8090` | Server port |
 | `APP_PASSPHRASE_HASH` | Yes | — | bcrypt hash of login passphrase |
+| `APP_SESSION_SECRET` | No | derived | HMAC key for session cookies |
 | `DATABASE_URL` | Yes | — | Postgres connection string |
+| `DB_MAX_CONNS` | No | `5` | Max database pool connections |
 | `LLM_PROVIDER` | No | `claude` | `claude`, `openai`, `groq`, or `ollama` |
 | `ANTHROPIC_API_KEY` | If claude | — | Anthropic API key |
 | `OPENAI_API_KEY` | If openai | — | OpenAI API key |
 | `GROQ_API_KEY` | If groq | — | Groq API key |
 | `OLLAMA_URL` | If ollama | `http://localhost:11434` | Ollama endpoint |
-| `PROJECT_TAGS` | No | see below | Comma-separated project tags |
+| `PROJECT_TAGS` | No | — | Comma-separated project tags |
 | `NTFY_URL` | No | — | Ntfy server URL for push notifications |
 | `NTFY_TOPIC` | No | — | Ntfy topic to publish to |
 | `SMTP_HOST` | No | — | SMTP server for daily digest email |
@@ -136,14 +140,28 @@ All configuration is via environment variables (or `.env` file):
 | `EMAIL_TO` | No | — | Digest recipient email |
 | `DIGEST_HOUR` | No | `7` | Hour (0-23) to send daily digest |
 
-Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellation,national life,cinfin`
+## Architecture
+
+```
+Browser -> Caddy (HTTPS + HSTS) -> Fiber (recover -> requestid -> csrf -> auth -> rate limiter)
+  -> Handler -> LLM provider -> PostgreSQL -> SSE hub -> All connected clients
+```
+
+- **App struct** — All dependencies (pool, queries, hub, llm, renderer) in one struct. No global state.
+- **SSE hub** — In-memory `map[chan string]bool` with mutex. Non-blocking broadcast, 30s keepalive, 5s reconnect. Graceful shutdown via `Close()`.
+- **LLM provider interface** — Swappable via env var. Claude uses Anthropic API; OpenAI/Groq/Ollama share one implementation. Retry on empty response before fallback.
+- **sqlc** — Type-safe generated queries with native Go types. Zero hand-written `Scan()` calls.
+- **embed.FS** — Migrations and static files baked into the binary. Templ components compile to native Go code.
+- **CSRF protection** — Fiber CSRF middleware with `X-CSRF-Token` header for HTMX requests.
 
 ## API Routes
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `GET` | `/health` | Health check (DB ping, no auth) |
 | `GET` | `/login` | Login page |
 | `POST` | `/auth` | Authenticate (rate limited: 5/15min) |
+| `POST` | `/logout` | End session |
 | `GET` | `/` | Dashboard (split-panel: tasks + time tracking) |
 | `POST` | `/tasks` | Create task(s) via LLM extraction |
 | `PATCH` | `/tasks/:id` | Toggle complete, edit task, or update deadline |
@@ -168,16 +186,40 @@ Default project tags: `campbells,personal,sedalia,BofA,gritton,diment,constellat
 
 Protected routes are rate limited at 60 requests/minute.
 
+## Testing
+
+80 tests across 9 test files, all passing with `-race`:
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `templates/components/helpers_test.go` | 19 | Deadline formatting, priority colors/labels, project meta, date/time helpers |
+| `llm/provider_test.go` | 13 | JSON parsing, markdown fencing, validation, fallback |
+| `render_test.go` | 11 | Dashboard data grouping, progress %, urgent counts, unconfigured tags |
+| `auth_test.go` | 9 | HMAC tokens, middleware, login/logout, session validation |
+| `handlers_test.go` | 8 | Full request cycle with mock LLM and real DB |
+| `config_test.go` | 7 | Config validation, defaults, env overrides, tag parsing |
+| `sse_test.go` | 6 | Subscribe/unsubscribe, broadcast, concurrency, full-channel skip |
+| `db_test.go` | 6 | CRUD operations against PostgreSQL |
+| `handlers_time_test.go` | 1 | Decimal time extraction from voice descriptions |
+
+```bash
+make test                    # all tests (skips DB if no Postgres)
+go test -race ./...          # with race detector
+go test -short ./...         # skip DB-dependent tests
+```
+
+CI runs lint, test (with Postgres service container), and build on every push to `main`.
+
 ## Deployment
 
-VoiceTask is designed for a single $4/month DigitalOcean droplet (512MB RAM, Ubuntu 24.04).
+VoiceTask is designed for a single small VPS (512MB RAM is sufficient).
 
 ```bash
 # Cross-compile
 make build-linux
 
 # Deploy (requires SERVER env var)
-SERVER=your-droplet-ip make deploy
+SERVER=your-server-ip make deploy
 ```
 
 The deploy target copies the binary and restarts the systemd service. The binary is fully self-contained — no runtime file dependencies.
@@ -191,51 +233,13 @@ The deploy target copies the binary and restarts the systemd service. The binary
 5. Create `/opt/voicetask/.env` with your configuration
 6. Enable and start: `systemctl enable --now voicetask`
 
-Caddy auto-provisions HTTPS via Let's Encrypt.
+Caddy auto-provisions HTTPS via Let's Encrypt with HSTS enabled.
 
-**Note:** On a 512MB droplet, add 1GB swap before building from source:
+**Note:** On a 512MB VPS, add 1GB swap before building from source:
 ```bash
 fallocate -l 1G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
 ```
-
-## Architecture
-
-```
-Browser → Caddy (HTTPS) → Fiber (recover → requestid → auth → rate limiter)
-  → Handler → LLM provider → PostgreSQL → SSE hub → All connected clients
-```
-
-- **App struct** — All dependencies (pool, queries, hub, llm, renderer) in one struct. No global state.
-- **SSE hub** — In-memory `map[chan string]bool` with mutex. Non-blocking broadcast, 30s keepalive, 5s reconnect.
-- **LLM provider interface** — Swappable via env var. Claude uses Anthropic API; OpenAI/Groq/Ollama share one implementation. Conservative priority defaults — only marks urgent/high when explicitly requested.
-- **sqlc** — Type-safe generated queries with native Go types via overrides. Zero hand-written `Scan()` calls.
-- **embed.FS** — Migrations and static files (CSS, JS, manifest) baked into the binary. Templ components compile to native Go code.
-- **Ntfy** — Optional push notifications via HTTP POST on task creation. Non-blocking goroutine.
-- **Email digest** — Optional daily summary via SMTP. Background goroutine fires at configured hour.
-
-## Testing
-
-79 tests across 8 test files, all passing with `-race`:
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| `templates/components/helpers_test.go` | 19 | Deadline formatting, priority colors/labels, project meta, date/time helpers |
-| `llm/provider_test.go` | 13 | JSON parsing, markdown fencing, validation, fallback |
-| `render_test.go` | 11 | Dashboard data grouping, progress %, urgent counts, unconfigured tags |
-| `auth_test.go` | 9 | HMAC tokens, middleware, login/logout, session validation |
-| `handlers_test.go` | 8 | Full request cycle with mock LLM and real DB |
-| `config_test.go` | 7 | Config validation, defaults, env overrides, tag parsing |
-| `sse_test.go` | 6 | Subscribe/unsubscribe, broadcast, concurrency, full-channel skip |
-| `db_test.go` | 6 | CRUD operations against PostgreSQL |
-
-```bash
-make test                    # all tests (skips DB if no Postgres)
-go test -race ./...          # with race detector
-go test -short ./...         # skip DB-dependent tests
-```
-
-CI runs lint, test (with Postgres service container), and build on every push to `main`.
 
 ## Browser Compatibility
 
