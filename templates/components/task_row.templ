@@ -110,6 +110,7 @@ templ TaskRow(task db.Task, accent string, projectTags []string) {
 		<form
 			x-show="editing"
 			x-cloak
+			x-init="htmx.process($el)"
 			hx-patch={ "/tasks/" + task.ID }
 			hx-target="#task-list"
 			hx-swap="outerHTML"

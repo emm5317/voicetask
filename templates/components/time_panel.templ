@@ -247,6 +247,7 @@ templ timeEntryRow(entry db.TimeEntry) {
 		<form
 			x-show="editing"
 			x-cloak
+			x-init="htmx.process($el)"
 			hx-patch={ "/time/" + entry.ID }
 			hx-target="#time-panel"
 			hx-swap="outerHTML"
