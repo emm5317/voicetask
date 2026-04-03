@@ -218,7 +218,9 @@ func (a *App) HandleExportCSV(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/csv")
 
 	w := csv.NewWriter(c.Response().BodyWriter())
-	w.Write([]string{"ID", "Title", "Project", "Priority", "Deadline", "Completed", "Created"})
+	if err := w.Write([]string{"ID", "Title", "Project", "Priority", "Deadline", "Completed", "Created"}); err != nil {
+		return fmt.Errorf("csv header: %w", err)
+	}
 	for _, t := range tasks {
 		deadline := ""
 		if t.Deadline != nil {
@@ -228,7 +230,9 @@ func (a *App) HandleExportCSV(c *fiber.Ctx) error {
 		if t.Completed {
 			completed = "yes"
 		}
-		w.Write([]string{t.ID, t.Title, t.ProjectTag, t.Priority, deadline, completed, t.CreatedAt.Format("2006-01-02 15:04")})
+		if err := w.Write([]string{t.ID, t.Title, t.ProjectTag, t.Priority, deadline, completed, t.CreatedAt.Format("2006-01-02 15:04")}); err != nil {
+			return fmt.Errorf("csv row: %w", err)
+		}
 	}
 	w.Flush()
 	return nil

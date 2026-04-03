@@ -144,7 +144,10 @@ func (a *App) HandleSwitchMatter(c *fiber.Ctx) error {
 	}
 
 	// Stop all running timers, start new one
-	a.queries.StopAllTimers(ctx)
+	if _, err := a.queries.StopAllTimers(ctx); err != nil {
+		slog.Error("stop all timers", "err", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to stop timers")
+	}
 	entry, err := a.queries.StartTimer(ctx, db.StartTimerParams{Matter: matter})
 	if err != nil {
 		slog.Error("start timer", "err", err, "matter", matter)
@@ -184,7 +187,10 @@ func (a *App) HandleResumeLast(c *fiber.Ctx) error {
 		return a.renderTimePanel(c)
 	}
 
-	a.queries.StopAllTimers(ctx)
+	if _, err := a.queries.StopAllTimers(ctx); err != nil {
+		slog.Error("stop all timers", "err", err)
+		return c.Status(fiber.StatusInternalServerError).SendString("Failed to stop timers")
+	}
 	entry, err := a.queries.StartTimer(ctx, db.StartTimerParams{Matter: last.Matter})
 	if err != nil {
 		slog.Error("resume last", "err", err)
@@ -478,7 +484,9 @@ func (a *App) HandleTimeExportCSV(c *fiber.Ctx) error {
 	c.Set("Content-Type", "text/csv")
 
 	w := csv.NewWriter(c.Response().BodyWriter())
-	w.Write([]string{"Date", "Matter", "Start", "End", "Duration", "Billable Hours", "Description"})
+	if err := w.Write([]string{"Date", "Matter", "Start", "End", "Duration", "Billable Hours", "Description"}); err != nil {
+		return fmt.Errorf("csv header: %w", err)
+	}
 	for _, e := range entries {
 		endStr := ""
 		durStr := ""
@@ -491,7 +499,7 @@ func (a *App) HandleTimeExportCSV(c *fiber.Ctx) error {
 			endStr = "(running)"
 			durStr = "(running)"
 		}
-		w.Write([]string{
+		if err := w.Write([]string{
 			e.StartTime.Local().Format("2006-01-02"),
 			e.Matter,
 			e.StartTime.Local().Format("3:04 PM"),
@@ -499,7 +507,9 @@ func (a *App) HandleTimeExportCSV(c *fiber.Ctx) error {
 			durStr,
 			fmt.Sprintf("%.1f", e.BillableHours),
 			e.Description,
-		})
+		}); err != nil {
+			return fmt.Errorf("csv row: %w", err)
+		}
 	}
 	w.Flush()
 	return nil
@@ -559,7 +569,7 @@ func (a *App) renderTimePanel(c *fiber.Ctx) error {
 func buildTimeReportHTML(sums []db.SumDurationByMatterRow, entries []db.TimeEntry, from, to string) string {
 	var b strings.Builder
 	b.WriteString(`<div style="font-family:system-ui,sans-serif;max-width:500px;margin:0 auto;padding:20px;color:#333;">`)
-	b.WriteString(fmt.Sprintf(`<h2 style="color:#b87040;margin:0 0 4px;font-size:18px;">Time Report</h2>`))
+	b.WriteString(`<h2 style="color:#b87040;margin:0 0 4px;font-size:18px;">Time Report</h2>`)
 	b.WriteString(fmt.Sprintf(`<p style="font-size:13px;color:#999;margin:0 0 20px;">%s to %s</p>`, from, to))
 
 	// Summary table
