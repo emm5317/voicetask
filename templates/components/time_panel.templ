@@ -191,85 +191,83 @@ templ activeTimer(timer model.TimerState) {
 
 templ timeEntryRow(entry db.TimeEntry) {
 	<div x-data="{ editing: false, confirmDelete: false }" class="task-row px-3 py-2.5 rounded-lg transition-colors duration-150 hover:bg-bg-hover">
-		<template x-if="!editing">
-			<div class="flex flex-col gap-1">
-				<div class="flex items-center gap-2">
-					<div class="w-[3px] h-3 rounded-sm opacity-70" style={ "background:" + ProjectAccent(entry.Matter) }></div>
-					<span class="text-xs font-semibold flex-1" style={ "color:" + ProjectAccent(entry.Matter) }>{ ProjectLabel(entry.Matter) }</span>
-					<span class="text-[11px] text-text-dim font-mono">
-						{ FmtTimeOnly(entry.StartTime) }
-						if entry.EndTime != nil {
-							– { FmtTimeOnly(*entry.EndTime) }
-						} else {
-							– now
-						}
-					</span>
-					<span class="text-xs font-semibold text-text font-mono">
-						if entry.EndTime != nil {
-							{ FmtBillable(entry.BillableHours) }
-						} else {
-							…
-						}
-					</span>
-				</div>
-				<div class="flex items-center gap-1.5 pl-[11px]">
-					if entry.Description != "" {
-						<span class="text-[11.5px] text-text-dim flex-1 italic">"{ entry.Description }"</span>
+		<div x-show="!editing" class="flex flex-col gap-1">
+			<div class="flex items-center gap-2">
+				<div class="w-[3px] h-3 rounded-sm opacity-70" style={ "background:" + ProjectAccent(entry.Matter) }></div>
+				<span class="text-xs font-semibold flex-1" style={ "color:" + ProjectAccent(entry.Matter) }>{ ProjectLabel(entry.Matter) }</span>
+				<span class="text-[11px] text-text-dim font-mono">
+					{ FmtTimeOnly(entry.StartTime) }
+					if entry.EndTime != nil {
+						– { FmtTimeOnly(*entry.EndTime) }
 					} else {
-						<span class="text-[11px] text-text-faint flex-1">(no description)</span>
+						– now
 					}
-					if entry.Description == "" {
-						<div x-data={ "timeVoiceNote('" + entry.ID + "')" } class="flex gap-1">
-							<button
-								x-show="speechSupported"
-								@click="toggleListening()"
-								x-bind:style="listening ? 'background:var(--color-error);' : 'background:var(--color-surface); border:1px solid var(--color-border);'"
-								class="w-7 h-7 rounded-md border-none cursor-pointer flex items-center justify-center"
-							>
-								<svg width="12" height="12" viewBox="0 0 24 24" fill="none" x-bind:stroke="listening ? 'white' : 'var(--color-text-dim)'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-									<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-									<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-									<line x1="12" y1="19" x2="12" y2="22"></line>
-								</svg>
-							</button>
-						</div>
+				</span>
+				<span class="text-xs font-semibold text-text font-mono">
+					if entry.EndTime != nil {
+						{ FmtBillable(entry.BillableHours) }
+					} else {
+						…
 					}
-					<button @click="editing = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-xs transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Edit">&#9998;</button>
-					<div class="relative">
-						<button x-show="!confirmDelete" @click="confirmDelete = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Delete">&times;</button>
-						<div x-show="confirmDelete" x-cloak class="flex gap-1">
-							<button hx-delete={ "/time/" + entry.ID } hx-target="#time-panel" hx-swap="outerHTML" class="text-[10px] font-semibold text-error bg-error/[0.08] border-none rounded-md px-2 py-[5px] cursor-pointer">Del</button>
-							<button @click="confirmDelete = false" class="text-xs text-text-muted bg-transparent border-none cursor-pointer">&times;</button>
-						</div>
+				</span>
+			</div>
+			<div class="flex items-center gap-1.5 pl-[11px]">
+				if entry.Description != "" {
+					<span class="text-[11.5px] text-text-dim flex-1 italic">"{ entry.Description }"</span>
+				} else {
+					<span class="text-[11px] text-text-faint flex-1">(no description)</span>
+				}
+				if entry.Description == "" {
+					<div x-data={ "timeVoiceNote('" + entry.ID + "')" } class="flex gap-1">
+						<button
+							x-show="speechSupported"
+							@click="toggleListening()"
+							x-bind:style="listening ? 'background:var(--color-error);' : 'background:var(--color-surface); border:1px solid var(--color-border);'"
+							class="w-7 h-7 rounded-md border-none cursor-pointer flex items-center justify-center"
+						>
+							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" x-bind:stroke="listening ? 'white' : 'var(--color-text-dim)'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+								<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+								<line x1="12" y1="19" x2="12" y2="22"></line>
+							</svg>
+						</button>
+					</div>
+				}
+				<button @click="editing = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-xs transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Edit">&#9998;</button>
+				<div class="relative">
+					<button x-show="!confirmDelete" @click="confirmDelete = true" class="w-7 h-7 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-150 hover:bg-error/[0.06] hover:text-error" title="Delete">&times;</button>
+					<div x-show="confirmDelete" x-cloak class="flex gap-1">
+						<button hx-delete={ "/time/" + entry.ID } hx-target="#time-panel" hx-swap="outerHTML" class="text-[10px] font-semibold text-error bg-error/[0.08] border-none rounded-md px-2 py-[5px] cursor-pointer">Del</button>
+						<button @click="confirmDelete = false" class="text-xs text-text-muted bg-transparent border-none cursor-pointer">&times;</button>
 					</div>
 				</div>
 			</div>
-		</template>
+		</div>
 		<!-- Edit form -->
-		<template x-if="editing">
-			<form
-				hx-patch={ "/time/" + entry.ID }
-				hx-target="#time-panel"
-				hx-swap="outerHTML"
-				class="flex flex-col gap-1.5"
-			>
-				<input type="hidden" name="action" value="edit"/>
-				<input type="hidden" name="date" value={ FmtDateInput(entry.StartTime) }/>
-				<div class="flex gap-1.5">
-					<input type="time" name="start_time" value={ entry.StartTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
-					if entry.EndTime != nil {
-						<input type="time" name="end_time" value={ entry.EndTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
-					} else {
-						<input type="time" name="end_time" value="" required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
-					}
-				</div>
-				<input type="text" name="description" value={ entry.Description } placeholder="Description" class="py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
-				<div class="flex gap-1.5 justify-end">
-					<button type="submit" class="py-1.5 px-3.5 rounded-[7px] border-none bg-accent text-bg text-[11px] font-semibold cursor-pointer">Save</button>
-					<button type="button" @click="editing = false" class="py-1.5 px-2.5 rounded-[7px] border-none bg-transparent text-text-muted text-[11px] cursor-pointer">Cancel</button>
-				</div>
-			</form>
-		</template>
+		<form
+			x-show="editing"
+			x-cloak
+			hx-patch={ "/time/" + entry.ID }
+			hx-target="#time-panel"
+			hx-swap="outerHTML"
+			class="flex flex-col gap-1.5"
+		>
+			<input type="hidden" name="action" value="edit"/>
+			<input type="hidden" name="date" value={ FmtDateInput(entry.StartTime) }/>
+			<div class="flex gap-1.5">
+				<input type="time" name="start_time" value={ entry.StartTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+				if entry.EndTime != nil {
+					<input type="time" name="end_time" value={ entry.EndTime.Local().Format("15:04") } required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+				} else {
+					<input type="time" name="end_time" value="" required class="flex-1 py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+				}
+			</div>
+			<input type="text" name="description" value={ entry.Description } placeholder="Description" class="py-[7px] px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"/>
+			<div class="flex gap-1.5 justify-end">
+				<button type="submit" class="py-1.5 px-3.5 rounded-[7px] border-none bg-accent text-bg text-[11px] font-semibold cursor-pointer">Save</button>
+				<button type="button" @click="editing = false" class="py-1.5 px-2.5 rounded-[7px] border-none bg-transparent text-text-muted text-[11px] cursor-pointer">Cancel</button>
+			</div>
+		</form>
 	</div>
 }
 

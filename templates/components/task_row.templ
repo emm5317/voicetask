@@ -11,149 +11,147 @@ templ TaskRow(task db.Task, accent string, projectTags []string) {
 		x-data="{ editing: false, confirmDelete: false }"
 	>
 		<!-- Normal view -->
-		<template x-if="!editing">
-			<div class="flex items-center gap-3 w-full">
-				<!-- Checkbox -->
-				<button
-					hx-patch={ "/tasks/" + task.ID }
-					hx-vals='{"action":"toggle"}'
-					hx-target="#task-list"
-					hx-swap="outerHTML"
-					class="w-11 h-11 rounded-[10px] shrink-0 border-none cursor-pointer flex items-center justify-center bg-transparent p-0"
-				>
-					if task.Completed {
-						<div class="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center opacity-70" style={ "background:" + accent }>
-							<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-						</div>
-					} else {
-						<div class="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center border-[1.5px] border-border transition-all duration-200"></div>
-					}
-				</button>
-				<!-- Title -->
-				<div @dblclick="editing = true" class="flex-1 min-w-0 cursor-default">
-					if task.Completed {
-						<div class="text-[13.5px] leading-normal text-text-muted line-through truncate">
-							{ task.Title }
-						</div>
-					} else if task.Priority == "urgent" {
-						<div class="text-[13.5px] leading-normal text-text-bright font-semibold truncate">
-							{ task.Title }
-						</div>
-					} else {
-						<div class="text-[13.5px] leading-normal text-text truncate">
-							{ task.Title }
-						</div>
-					}
-				</div>
-				<!-- Metadata -->
-				<div class="flex items-center gap-2 shrink-0">
-					if !task.Completed && task.Deadline != nil {
-						if dl := FormatDeadline(task.Deadline); dl != nil {
-							if dl.Hot {
-								<span class="text-[11px] font-semibold font-mono whitespace-nowrap px-2 py-[3px] rounded-md" style={ "color:" + dl.Color + "; background:" + dl.Color + "14" }>
-									{ dl.Text }
-								</span>
-							} else {
-								<span class="text-[11px] font-semibold font-mono whitespace-nowrap px-1.5 py-[3px]" style={ "color:" + dl.Color }>
-									{ dl.Text }
-								</span>
-							}
+		<div x-show="!editing" class="flex items-center gap-3 w-full">
+			<!-- Checkbox -->
+			<button
+				hx-patch={ "/tasks/" + task.ID }
+				hx-vals='{"action":"toggle"}'
+				hx-target="#task-list"
+				hx-swap="outerHTML"
+				class="w-11 h-11 rounded-[10px] shrink-0 border-none cursor-pointer flex items-center justify-center bg-transparent p-0"
+			>
+				if task.Completed {
+					<div class="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center opacity-70" style={ "background:" + accent }>
+						<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--color-bg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+					</div>
+				} else {
+					<div class="w-[22px] h-[22px] rounded-[7px] flex items-center justify-center border-[1.5px] border-border transition-all duration-200"></div>
+				}
+			</button>
+			<!-- Title -->
+			<div @dblclick="editing = true" class="flex-1 min-w-0 cursor-default">
+				if task.Completed {
+					<div class="text-[13.5px] leading-normal text-text-muted line-through truncate">
+						{ task.Title }
+					</div>
+				} else if task.Priority == "urgent" {
+					<div class="text-[13.5px] leading-normal text-text-bright font-semibold truncate">
+						{ task.Title }
+					</div>
+				} else {
+					<div class="text-[13.5px] leading-normal text-text truncate">
+						{ task.Title }
+					</div>
+				}
+			</div>
+			<!-- Metadata -->
+			<div class="flex items-center gap-2 shrink-0">
+				if !task.Completed && task.Deadline != nil {
+					if dl := FormatDeadline(task.Deadline); dl != nil {
+						if dl.Hot {
+							<span class="text-[11px] font-semibold font-mono whitespace-nowrap px-2 py-[3px] rounded-md" style={ "color:" + dl.Color + "; background:" + dl.Color + "14" }>
+								{ dl.Text }
+							</span>
+						} else {
+							<span class="text-[11px] font-semibold font-mono whitespace-nowrap px-1.5 py-[3px]" style={ "color:" + dl.Color }>
+								{ dl.Text }
+							</span>
 						}
 					}
-					if !task.Completed {
-						if pl := PriorityLabel(task.Priority); pl != "" {
-							if task.Priority == "urgent" {
-								<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] rounded-[5px] text-error bg-error/10">
-									{ pl }
-								</span>
-							} else if task.Priority == "high" {
-								<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] rounded-[5px] text-high bg-high/[0.08]">
-									{ pl }
-								</span>
-							} else {
-								<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] text-text-dim">
-									{ pl }
-								</span>
-							}
+				}
+				if !task.Completed {
+					if pl := PriorityLabel(task.Priority); pl != "" {
+						if task.Priority == "urgent" {
+							<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] rounded-[5px] text-error bg-error/10">
+								{ pl }
+							</span>
+						} else if task.Priority == "high" {
+							<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] rounded-[5px] text-high bg-high/[0.08]">
+								{ pl }
+							</span>
+						} else {
+							<span class="text-[9.5px] font-bold tracking-[0.08em] whitespace-nowrap px-[7px] py-[3px] text-text-dim">
+								{ pl }
+							</span>
 						}
-						<!-- Edit button -->
-						<button class="w-9 h-9 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-150 hover:bg-error/[0.06] hover:text-error" @click="editing = true" title="Edit">
-							&#9998;
-						</button>
 					}
-					<!-- Delete -->
-					<div class="relative">
+					<!-- Edit button -->
+					<button class="w-9 h-9 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-150 hover:bg-error/[0.06] hover:text-error" @click="editing = true" title="Edit">
+						&#9998;
+					</button>
+				}
+				<!-- Delete -->
+				<div class="relative">
+					<button
+						class="w-9 h-9 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-lg font-light transition-all duration-150 hover:bg-error/[0.06] hover:text-error"
+						x-show="!confirmDelete"
+						@click="confirmDelete = true"
+						title="Delete"
+					>
+						&times;
+					</button>
+					<div x-show="confirmDelete" x-cloak class="flex gap-1 items-center">
 						<button
-							class="w-9 h-9 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center text-text-faint text-lg font-light transition-all duration-150 hover:bg-error/[0.06] hover:text-error"
-							x-show="!confirmDelete"
-							@click="confirmDelete = true"
-							title="Delete"
+							hx-delete={ "/tasks/" + task.ID }
+							hx-target="#task-list"
+							hx-swap="outerHTML"
+							class="text-[10px] font-semibold text-error bg-error/[0.08] border-none rounded-md px-2.5 py-1.5 cursor-pointer whitespace-nowrap"
 						>
+							Delete
+						</button>
+						<button @click="confirmDelete = false" class="text-xs text-text-muted bg-transparent border-none cursor-pointer p-1">
 							&times;
 						</button>
-						<div x-show="confirmDelete" x-cloak class="flex gap-1 items-center">
-							<button
-								hx-delete={ "/tasks/" + task.ID }
-								hx-target="#task-list"
-								hx-swap="outerHTML"
-								class="text-[10px] font-semibold text-error bg-error/[0.08] border-none rounded-md px-2.5 py-1.5 cursor-pointer whitespace-nowrap"
-							>
-								Delete
-							</button>
-							<button @click="confirmDelete = false" class="text-xs text-text-muted bg-transparent border-none cursor-pointer p-1">
-								&times;
-							</button>
-						</div>
 					</div>
 				</div>
 			</div>
-		</template>
+		</div>
 		<!-- Edit view -->
-		<template x-if="editing">
-			<form
-				hx-patch={ "/tasks/" + task.ID }
-				hx-target="#task-list"
-				hx-swap="outerHTML"
-				class="flex items-center gap-1.5 w-full flex-wrap"
-			>
-				<input type="hidden" name="action" value="edit"/>
-				<input
-					type="text"
-					name="title"
-					value={ task.Title }
-					class="flex-1 min-w-[140px] py-2 px-3 rounded-lg border border-border bg-surface text-text-bright text-[13px] font-body outline-none"
-				/>
-				<input
-					type="text"
-					name="project_tag"
-					value={ task.ProjectTag }
-					list={ "tags-" + task.ID }
-					class="w-[100px] py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"
-				/>
-				<datalist id={ "tags-" + task.ID }>
-					for _, tag := range projectTags {
-						<option value={ tag }></option>
-					}
-				</datalist>
-				<select name="priority" class="py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body">
-					<option value="urgent" selected?={ task.Priority == "urgent" }>Urgent</option>
-					<option value="high" selected?={ task.Priority == "high" }>High</option>
-					<option value="normal" selected?={ task.Priority == "normal" }>Normal</option>
-					<option value="low" selected?={ task.Priority == "low" }>Low</option>
-				</select>
-				<input
-					type="date"
-					name="deadline"
-					value={ FmtDateInput(task.Deadline) }
-					class="py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"
-				/>
-				<button type="submit" class="py-2 px-3.5 rounded-lg border-none bg-accent text-bg text-xs font-semibold cursor-pointer">
-					Save
-				</button>
-				<button type="button" @click="editing = false" class="py-2 px-2.5 rounded-lg border-none bg-transparent text-text-muted text-xs cursor-pointer">
-					Cancel
-				</button>
-			</form>
-		</template>
+		<form
+			x-show="editing"
+			x-cloak
+			hx-patch={ "/tasks/" + task.ID }
+			hx-target="#task-list"
+			hx-swap="outerHTML"
+			class="flex items-center gap-1.5 w-full flex-wrap"
+		>
+			<input type="hidden" name="action" value="edit"/>
+			<input
+				type="text"
+				name="title"
+				value={ task.Title }
+				class="flex-1 min-w-[140px] py-2 px-3 rounded-lg border border-border bg-surface text-text-bright text-[13px] font-body outline-none"
+			/>
+			<input
+				type="text"
+				name="project_tag"
+				value={ task.ProjectTag }
+				list={ "tags-" + task.ID }
+				class="w-[100px] py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"
+			/>
+			<datalist id={ "tags-" + task.ID }>
+				for _, tag := range projectTags {
+					<option value={ tag }></option>
+				}
+			</datalist>
+			<select name="priority" class="py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body">
+				<option value="urgent" selected?={ task.Priority == "urgent" }>Urgent</option>
+				<option value="high" selected?={ task.Priority == "high" }>High</option>
+				<option value="normal" selected?={ task.Priority == "normal" }>Normal</option>
+				<option value="low" selected?={ task.Priority == "low" }>Low</option>
+			</select>
+			<input
+				type="date"
+				name="deadline"
+				value={ FmtDateInput(task.Deadline) }
+				class="py-2 px-2.5 rounded-lg border border-border bg-surface text-text text-xs font-body"
+			/>
+			<button type="submit" class="py-2 px-3.5 rounded-lg border-none bg-accent text-bg text-xs font-semibold cursor-pointer">
+				Save
+			</button>
+			<button type="button" @click="editing = false" class="py-2 px-2.5 rounded-lg border-none bg-transparent text-text-muted text-xs cursor-pointer">
+				Cancel
+			</button>
+		</form>
 	</div>
 }
