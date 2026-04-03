@@ -96,10 +96,28 @@ WHERE end_time IS NOT NULL
 ORDER BY end_time DESC
 LIMIT 1;
 
+-- name: GetTimeEntry :one
+SELECT id, matter, description, raw_transcript, start_time, end_time,
+       duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at
+FROM time_entries
+WHERE id = $1;
+
 -- name: UpdateTimeEntryDescription :one
 UPDATE time_entries
 SET description = $2,
     raw_transcript = $3,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, matter, description, raw_transcript, start_time, end_time,
+          duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at;
+
+-- name: UpdateTimeEntryWithDuration :one
+UPDATE time_entries
+SET description = $2,
+    raw_transcript = $3,
+    end_time = $4,
+    duration_secs = $5,
+    billable_hours = $6,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, matter, description, raw_transcript, start_time, end_time,

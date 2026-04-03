@@ -101,6 +101,18 @@ func (q *Queries) GetLastStoppedEntry(ctx context.Context) (TimeEntry, error) {
 	return scanTimeEntry(row)
 }
 
+const getTimeEntry = `
+SELECT id, matter, description, raw_transcript, start_time, end_time,
+       duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at
+FROM time_entries
+WHERE id = $1
+`
+
+func (q *Queries) GetTimeEntry(ctx context.Context, id string) (TimeEntry, error) {
+	row := q.db.QueryRow(ctx, getTimeEntry, id)
+	return scanTimeEntry(row)
+}
+
 const updateTimeEntryDescription = `
 UPDATE time_entries
 SET description = $2,
@@ -119,6 +131,35 @@ type UpdateTimeEntryDescriptionParams struct {
 
 func (q *Queries) UpdateTimeEntryDescription(ctx context.Context, arg UpdateTimeEntryDescriptionParams) (TimeEntry, error) {
 	row := q.db.QueryRow(ctx, updateTimeEntryDescription, arg.ID, arg.Description, arg.RawTranscript)
+	return scanTimeEntry(row)
+}
+
+const updateTimeEntryWithDuration = `
+UPDATE time_entries
+SET description = $2,
+    raw_transcript = $3,
+    end_time = $4,
+    duration_secs = $5,
+    billable_hours = $6,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, matter, description, raw_transcript, start_time, end_time,
+          duration_secs, billable_hours::float8 AS billable_hours, created_at, updated_at
+`
+
+type UpdateTimeEntryWithDurationParams struct {
+	ID            string    `json:"id"`
+	Description   string    `json:"description"`
+	RawTranscript *string   `json:"raw_transcript"`
+	EndTime       time.Time `json:"end_time"`
+	DurationSecs  int       `json:"duration_secs"`
+	BillableHours float64   `json:"billable_hours"`
+}
+
+func (q *Queries) UpdateTimeEntryWithDuration(ctx context.Context, arg UpdateTimeEntryWithDurationParams) (TimeEntry, error) {
+	row := q.db.QueryRow(ctx, updateTimeEntryWithDuration,
+		arg.ID, arg.Description, arg.RawTranscript, arg.EndTime, arg.DurationSecs, arg.BillableHours,
+	)
 	return scanTimeEntry(row)
 }
 

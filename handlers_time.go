@@ -5,6 +5,9 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log/slog"
+	"math"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +17,35 @@ import (
 	"github.com/emm5317/voicetask/templates/components"
 	"github.com/emm5317/voicetask/templates/model"
 )
+
+// decimalTimeRe matches a decimal number at the end of a string (e.g., ".2", "1.1", "0.5").
+// Used to detect when a user dictates billable hours inline in a voice note description.
+var decimalTimeRe = regexp.MustCompile(`(?:^|\s)(\d*\.\d+)\s*$`)
+
+// extractDecimalTime checks if the description ends with a decimal time value.
+// Returns the cleaned description (number stripped), parsed hours, and whether a match was found.
+func extractDecimalTime(desc string) (cleaned string, hours float64, ok bool) {
+	match := decimalTimeRe.FindStringSubmatchIndex(desc)
+	if match == nil {
+		return desc, 0, false
+	}
+	hoursStr := desc[match[2]:match[3]]
+	h, err := strconv.ParseFloat(hoursStr, 64)
+	if err != nil || h <= 0 || h > 24.0 {
+		return desc, 0, false
+	}
+	// Strip the decimal time from the description
+	cleaned = strings.TrimSpace(desc[:match[0]])
+	if match[0] > 0 && desc[match[0]] == ' ' {
+		cleaned = strings.TrimSpace(desc[:match[0]])
+	}
+	if cleaned == "" {
+		return desc, 0, false
+	}
+	// Round to nearest tenth to avoid float precision issues
+	h = math.Round(h*10) / 10
+	return cleaned, h, true
+}
 
 // populateTimeData fills DashboardData with time tracking info for the given date.
 func (a *App) populateTimeData(ctx context.Context, data *DashboardData, viewDate time.Time) {
@@ -223,15 +255,39 @@ func (a *App) HandleUpdateTimeEntry(c *fiber.Ctx) error {
 		if transcript != "" {
 			tp = &transcript
 		}
-		if _, err := a.queries.UpdateTimeEntryDescription(c.UserContext(), db.UpdateTimeEntryDescriptionParams{
-			ID:            id,
-			Description:   desc,
-			RawTranscript: tp,
-		}); err != nil {
-			slog.Error("update time entry description", "id", id, "err", err)
-			return c.Status(fiber.StatusInternalServerError).SendString("Failed to update")
+
+		cleanedDesc, hours, hasDecimalTime := extractDecimalTime(desc)
+		if hasDecimalTime {
+			entry, err := a.queries.GetTimeEntry(c.UserContext(), id)
+			if err != nil {
+				slog.Error("get time entry for decimal time", "id", id, "err", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to update")
+			}
+			durationSecs := int(hours * 3600)
+			endTime := entry.StartTime.Add(time.Duration(durationSecs) * time.Second)
+			if _, err := a.queries.UpdateTimeEntryWithDuration(c.UserContext(), db.UpdateTimeEntryWithDurationParams{
+				ID:            id,
+				Description:   cleanedDesc,
+				RawTranscript: tp,
+				EndTime:       endTime,
+				DurationSecs:  durationSecs,
+				BillableHours: hours,
+			}); err != nil {
+				slog.Error("update time entry with decimal time", "id", id, "err", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to update")
+			}
+			slog.Info("time entry updated with decimal time", "id", id, "hours", hours, "desc", cleanedDesc)
+		} else {
+			if _, err := a.queries.UpdateTimeEntryDescription(c.UserContext(), db.UpdateTimeEntryDescriptionParams{
+				ID:            id,
+				Description:   desc,
+				RawTranscript: tp,
+			}); err != nil {
+				slog.Error("update time entry description", "id", id, "err", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to update")
+			}
+			slog.Info("time entry description updated", "id", id)
 		}
-		slog.Info("time entry description updated", "id", id)
 
 	case "edit":
 		desc := c.FormValue("description")
