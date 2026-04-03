@@ -131,6 +131,10 @@ func main() {
 		CookieSecure:   app.cfg.SecureCookies,
 		Expiration:     12 * time.Hour,
 		KeyGenerator:   utils.UUIDv4,
+		ErrorHandler: func(c *fiber.Ctx, err error) error {
+			slog.Warn("csrf rejected", "path", c.Path(), "method", c.Method(), "err", err)
+			return c.Status(fiber.StatusForbidden).SendString("CSRF token invalid")
+		},
 	})
 
 	// Protected routes with rate limiting: 60 req/min (increased for timer switching)

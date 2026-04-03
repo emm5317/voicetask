@@ -98,6 +98,17 @@ func (a *App) HandleUpdateTask(c *fiber.Ctx) error {
 	id := c.Params("id")
 	action := c.FormValue("action")
 
+	// DEBUG: log raw request to diagnose edit persistence issue
+	slog.Info("update request",
+		"id", id,
+		"action", action,
+		"method", c.Method(),
+		"content_type", c.Get("Content-Type"),
+		"title", c.FormValue("title"),
+		"body_len", len(c.Body()),
+		"body", string(c.Body()),
+	)
+
 	switch action {
 	case "toggle":
 		if _, err := a.queries.ToggleTask(c.UserContext(), id); err != nil {
