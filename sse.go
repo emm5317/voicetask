@@ -45,6 +45,18 @@ func (h *SSEHub) Unsubscribe(ch chan string) {
 	}
 }
 
+// Close shuts down the hub by closing all client channels.
+// Called during graceful shutdown.
+func (h *SSEHub) Close() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for ch := range h.clients {
+		close(ch)
+		delete(h.clients, ch)
+	}
+	slog.Info("sse hub closed")
+}
+
 // Broadcast sends an event to all connected clients.
 // Non-blocking: skips clients with full buffers.
 func (h *SSEHub) Broadcast(event, data string) {

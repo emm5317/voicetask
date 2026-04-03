@@ -21,7 +21,7 @@ templ Header(timer model.TimerState) {
 				<span class="font-body text-[17px] font-bold text-accent tracking-[0.06em] uppercase">task</span>
 			</div>
 		</div>
-		<!-- Right: clock + theme toggle -->
+		<!-- Right: clock + theme toggle + logout -->
 		<div class="flex items-center gap-3">
 			<div x-data="clock()" class="flex flex-col items-end gap-0.5">
 				<span x-text="time" class="text-[13px] font-medium text-text-dim font-mono"></span>
@@ -33,6 +33,11 @@ templ Header(timer model.TimerState) {
 			>
 				<span x-text="theme === 'dark' ? '&#9788;' : '&#9790;'"></span>
 			</button>
+			<form method="POST" action="/logout" class="m-0 p-0">
+				<button type="submit" class="w-9 h-9 rounded-lg border border-border bg-surface cursor-pointer flex items-center justify-center text-text-faint text-sm transition-all duration-200 hover:text-error hover:border-error/30" title="Sign out">
+					&#10140;
+				</button>
+			</form>
 		</div>
 	</header>
 }

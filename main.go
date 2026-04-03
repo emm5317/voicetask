@@ -13,10 +13,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/csrf"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/gofiber/fiber/v2/utils"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/emm5317/voicetask/db"
@@ -46,7 +48,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pool, err := NewPool(ctx, cfg.DatabaseURL)
+	pool, err := NewPool(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
 	if err != nil {
 		slog.Error("database", "err", err)
 		os.Exit(1)
@@ -74,8 +76,11 @@ func main() {
 	}
 
 	server := fiber.New(fiber.Config{
-		AppName:      "VoiceTask",
-		ServerHeader: "VoiceTask",
+		AppName:               "VoiceTask",
+		ServerHeader:          "VoiceTask",
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:         []string{"127.0.0.1", "::1"},
+		ProxyHeader:            "X-Forwarded-For",
 	})
 
 	// Serve embedded static files (manifest.json, etc.)
@@ -102,10 +107,31 @@ func main() {
 		},
 	}), app.HandleAuth)
 
-	server.Get("/logout", app.HandleLogout)
+	server.Post("/logout", app.HandleLogout)
+
+	// Health check (no auth)
+	server.Get("/health", func(c *fiber.Ctx) error {
+		hctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		if err := app.pool.Ping(hctx); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).SendString("DB unavailable")
+		}
+		return c.SendString("OK")
+	})
 
 	// SSE endpoint (auth required, but no rate limit — long-lived connection)
 	server.Get("/tasks/stream", app.AuthRequired, app.hub.HandleStream)
+
+	// CSRF middleware for mutating routes
+	csrfMiddleware := csrf.New(csrf.Config{
+		KeyLookup:      "header:X-CSRF-Token",
+		CookieName:     "csrf_",
+		CookieHTTPOnly: false,
+		CookieSameSite: "Strict",
+		CookieSecure:   true,
+		Expiration:     12 * time.Hour,
+		KeyGenerator:   utils.UUIDv4,
+	})
 
 	// Protected routes with rate limiting: 60 req/min (increased for timer switching)
 	protected := server.Group("/", app.AuthRequired, limiter.New(limiter.Config{
@@ -114,7 +140,7 @@ func main() {
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
 		},
-	}))
+	}), csrfMiddleware)
 
 	protected.Get("/", app.HandleDashboard)
 	protected.Get("/tasks/list", app.HandleTaskList)
@@ -154,6 +180,7 @@ func main() {
 
 	<-ctx.Done()
 	slog.Info("shutting down...")
+	app.hub.Close()
 	_ = server.Shutdown()
 }
 

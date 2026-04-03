@@ -14,6 +14,20 @@ type Provider interface {
 	ExtractTasks(ctx context.Context, transcript string) ([]ExtractedTask, error)
 }
 
+// ExtractWithRetry wraps a provider's ExtractTasks with a single retry on empty results.
+func ExtractWithRetry(ctx context.Context, p Provider, transcript string) ([]ExtractedTask, error) {
+	tasks, err := p.ExtractTasks(ctx, transcript)
+	if err != nil {
+		return nil, err
+	}
+	if len(tasks) > 0 {
+		return tasks, nil
+	}
+	// Single retry on empty results before falling back
+	log.Printf("LLM returned empty tasks, retrying once")
+	return p.ExtractTasks(ctx, transcript)
+}
+
 // ExtractedTask represents a task parsed from an LLM response.
 type ExtractedTask struct {
 	Title      string `json:"title"`

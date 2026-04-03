@@ -36,7 +36,7 @@ func handlerTestApp(t *testing.T) (*App, *fiber.App) {
 	}
 
 	ctx := context.Background()
-	pool, err := NewPool(ctx, dbURL)
+	pool, err := NewPool(ctx, dbURL, 5)
 	if err != nil {
 		t.Skipf("skipping handler test — cannot connect to DB: %v", err)
 	}

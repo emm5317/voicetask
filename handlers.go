@@ -39,17 +39,21 @@ func (a *App) HandleCreateTask(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("Input is required")
 	}
 	if len(input) > maxInputLength {
-		input = input[:maxInputLength]
+		return c.Status(fiber.StatusBadRequest).SendString("Input too long (max 2000 characters)")
 	}
 
-	slog.Info("creating task", "input", input, "source", c.FormValue("source"))
+	slog.Debug("creating task", "input", input, "source", c.FormValue("source"))
 
 	var extracted []llm.ExtractedTask
 	if a.llm != nil {
 		var err error
-		extracted, err = a.llm.ExtractTasks(c.UserContext(), input)
+		extracted, err = llm.ExtractWithRetry(c.UserContext(), a.llm, input)
 		if err != nil {
-			slog.Error("llm extraction failed, using fallback", "err", err, "input", input)
+			truncated := input
+			if len(truncated) > 100 {
+				truncated = truncated[:100] + "..."
+			}
+			slog.Error("llm extraction failed, using fallback", "err", err, "input_prefix", truncated)
 		}
 	}
 	if len(extracted) == 0 {
@@ -242,14 +246,13 @@ func (a *App) HandleExportJSON(c *fiber.Ctx) error {
 	c.Set("Content-Type", "application/json")
 
 	type exportTask struct {
-		ID            string  `json:"id"`
-		Title         string  `json:"title"`
-		ProjectTag    string  `json:"project_tag"`
-		Priority      string  `json:"priority"`
-		Deadline      *string `json:"deadline,omitempty"`
-		RawTranscript *string `json:"raw_transcript,omitempty"`
-		Completed     bool    `json:"completed"`
-		CreatedAt     string  `json:"created_at"`
+		ID         string  `json:"id"`
+		Title      string  `json:"title"`
+		ProjectTag string  `json:"project_tag"`
+		Priority   string  `json:"priority"`
+		Deadline   *string `json:"deadline,omitempty"`
+		Completed  bool    `json:"completed"`
+		CreatedAt  string  `json:"created_at"`
 	}
 
 	export := make([]exportTask, len(tasks))
@@ -261,7 +264,7 @@ func (a *App) HandleExportJSON(c *fiber.Ctx) error {
 		}
 		export[i] = exportTask{
 			ID: t.ID, Title: t.Title, ProjectTag: t.ProjectTag,
-			Priority: t.Priority, Deadline: deadline, RawTranscript: t.RawTranscript,
+			Priority: t.Priority, Deadline: deadline,
 			Completed: t.Completed, CreatedAt: t.CreatedAt.Format(time.RFC3339),
 		}
 	}

@@ -23,7 +23,7 @@ func testPool(t *testing.T) (*pgxpool.Pool, *db.Queries) {
 	}
 
 	ctx := context.Background()
-	pool, err := NewPool(ctx, dbURL)
+	pool, err := NewPool(ctx, dbURL, 5)
 	if err != nil {
 		t.Skipf("skipping DB test — cannot connect: %v", err)
 	}

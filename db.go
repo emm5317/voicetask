@@ -15,12 +15,12 @@ var migration001 string
 var migration002 string
 
 // NewPool creates a new pgx connection pool.
-func NewPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+func NewPool(ctx context.Context, databaseURL string, maxConns int32) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse config: %w", err)
 	}
-	config.MaxConns = 5
+	config.MaxConns = maxConns
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

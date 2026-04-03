@@ -256,6 +256,17 @@ function timeVoiceNote(entryId) {
     };
 }
 
+// CSRF token helper — reads csrf_ cookie value
+function getCsrfToken() {
+    var match = document.cookie.match(/(^|; )csrf_=([^;]*)/);
+    return match ? decodeURIComponent(match[2]) : '';
+}
+
+// Inject CSRF token into all HTMX requests
+document.addEventListener('htmx:configRequest', function(e) {
+    e.detail.headers['X-CSRF-Token'] = getCsrfToken();
+});
+
 // HTMX error toast — must wait for body to exist since this script loads in <head>
 document.addEventListener('DOMContentLoaded', function() {
     document.body.addEventListener('htmx:responseError', function() {
@@ -279,7 +290,8 @@ function initSortable() {
                     items.push({id: row.dataset.id, sort_order: i});
                 });
                 fetch('/tasks/reorder', {
-                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json', 'X-CSRF-Token': getCsrfToken()},
                     body: JSON.stringify(items)
                 });
             }

@@ -60,7 +60,7 @@ func (a *App) HandleAuth(c *fiber.Ctx) error {
 		MaxAge:   int(sessionMaxAge.Seconds()),
 		HTTPOnly: true,
 		Secure:   true,
-		SameSite: "Lax",
+		SameSite: "Strict",
 	})
 
 	slog.Info("login success", "ip", c.IP())
@@ -81,16 +81,21 @@ func (a *App) HandleLogout(c *fiber.Ctx) error {
 		MaxAge:   -1,
 		HTTPOnly: true,
 		Secure:   true,
-		SameSite: "Lax",
+		SameSite: "Strict",
 	})
 	return c.Redirect("/login")
 }
 
-// sessionToken generates a deterministic HMAC token from the passphrase hash.
-// Since this is single-user, the token is always the same for a given hash.
+// sessionToken generates a deterministic HMAC token.
+// Uses APP_SESSION_SECRET as the HMAC key if set, otherwise falls back to passphrase hash.
+// A separate secret prevents a DB leak of the hash from immediately yielding the session token.
 func (a *App) sessionToken() string {
-	mac := hmac.New(sha256.New, []byte(a.cfg.PassphraseHash))
-	mac.Write([]byte("voicetask-session"))
+	key := a.cfg.SessionSecret
+	if key == "" {
+		key = a.cfg.PassphraseHash
+	}
+	mac := hmac.New(sha256.New, []byte(key))
+	mac.Write([]byte(a.cfg.PassphraseHash))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 

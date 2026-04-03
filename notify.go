@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // ntfyPriority maps task priority to ntfy priority levels (1-5).
@@ -37,7 +38,8 @@ func (a *App) notifyTaskCreated(title, tag, priority string) {
 			req.Header.Set("Priority", p)
 		}
 
-		resp, err := http.DefaultClient.Do(req)
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
 		if err != nil {
 			slog.Error("ntfy: send", "err", err)
 			return
